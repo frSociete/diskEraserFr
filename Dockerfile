@@ -6,7 +6,7 @@ ENV LANG=fr_FR.UTF-8 \
     LC_ALL=fr_FR.UTF-8 \
     PYTHONUNBUFFERED=1
 
-# Install necessary dependencies and tools
+# Install necessary dependencies, including lsblk (from util-linux)
 RUN apk update && apk add --no-cache \
     bash \
     coreutils \
@@ -15,6 +15,7 @@ RUN apk update && apk add --no-cache \
     python3 \
     py3-pip \
     alpine-sdk \
+    util-linux \
     && echo "export LANG=fr_FR.UTF-8" >> /etc/profile \
     && echo "export LC_ALL=fr_FR.UTF-8" >> /etc/profile
 
