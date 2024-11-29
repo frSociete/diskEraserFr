@@ -50,3 +50,51 @@ docker run --rm -it --privileged <your_username>/disk-eraser:latest
 ```bash
 sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
 ```
+
+3. **Boot from the USB key**:
+
+- Configure your BIOS/UEFI to boot from the USB key.
+
+- Follow the on-screen instructions to use the tool.
+
+## Command Line Options
+
+When running the project directly in Python or via Docker, you can provide arguments to automate certain steps.
+
+**Select file system**:
+
+- -f ext4: Format the disk with the EXT4 file system.
+
+- -f ntfs: Format the disk with the NTFS file system.
+
+Example :
+
+```bash
+python3 main.py -f ext4
+```
+
+## Project Structure
+
+Here is the main structure of the project:
+
+```bash
+project/
+├── README.md                   # Documentation for the project
+├── code/                       # Main Python scripts for the tool
+│   ├── disk_erase.py           # Module for secure data erasure
+│   ├── disk_format.py          # Module for formatting disks
+│   ├── disk_partition.py       # Module for creating partitions
+│   ├── mainParse.py            # Main script with argument parsing
+│   └── utils.py                # Utility functions (e.g., disk listing)
+├── iso/                        # Files related to creating the bootable ISO
+│   ├── bootable_iso/           # Structure for the bootable ISO
+│   │   ├── iso_root/           # Files required at the root of the ISO
+│   │   └── scripts/            # Scripts used in the ISO environment
+│   │       ├── disk_erase.py   # Copy of the disk erasure script for ISO
+│   │       ├── disk_format.py  # Copy of the disk formatting script for ISO
+│   │       ├── disk_partition.py # Copy of the partitioning script for ISO
+│   │       ├── main.py         # Main script for running from ISO
+│   │       └── utils.py        # Utilities for the ISO environment
+│   └── createIso.sh            # Script to generate the bootable ISO
+└── setup.sh                    # Script to install dependencies and prepare the project
+```
