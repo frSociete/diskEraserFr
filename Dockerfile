@@ -1,25 +1,24 @@
-# Use the official Debian image from Docker Hub
-FROM debian:latest
+# Use the lightweight Debian Slim image
+FROM debian:bullseye-slim
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Install necessary packages
-RUN apt-get update -y && \
-    apt-get install -y \
+# Install necessary packages for the Secure Disk Erase Tool
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     coreutils \
     parted \
     ntfs-3g \
+    dosfstools \
+    e2fsprogs \
+    util-linux \
     python3 \
-    python3-pip \
-    dosfstools && \
-    apt-get clean
+    python3-pip && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy the entire project into the /app directory in the container
-COPY . /app
-
-# Clean up unnecessary files (if any)
-RUN rm -rf /app/setup.sh  # Only if you included the setup.sh script in your COPY command
+COPY ./code /app
 
 # Set the default command to run the Python script
-CMD ["python3", "/app/code/main.py"]
+CMD ["python3", "/app/main.py"]
