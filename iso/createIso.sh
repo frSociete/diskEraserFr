@@ -45,16 +45,23 @@ EOF
 
 # Step 6: Copy Python code into the chroot environment
 echo "Copying Python code into the chroot environment..."
-sudo cp -r ./scripts/* "${TARGET_DIR}/root/"
+sudo cp -r ${SCRIPT_DIR}/* "${TARGET_DIR}/root/"
 
-# Step 7: Create startup script to run the Python code as root
+# Step 7: Create startup script to run Python program
 echo "Creating startup script to run Python program..."
-sudo bash -c 'cat <<EOF > ${TARGET_DIR}/etc/profile.d/startup.sh
+
+# Ensure the directory exists
+sudo chroot "${TARGET_DIR}" mkdir -p /etc/profile.d/
+
+# Create the startup script inside the chroot
+sudo chroot "${TARGET_DIR}" bash -c 'cat <<EOF > /etc/profile.d/startup.sh
 #!/bin/bash
 python3 /root/main.py
 EOF'
 
-sudo chmod +x "${TARGET_DIR}/etc/profile.d/startup.sh"
+# Ensure the script is executable
+sudo chroot "${TARGET_DIR}" chmod +x /etc/profile.d/startup.sh
+
 
 # Step 8: Create GRUB configuration
 echo "Creating GRUB configuration..."
