@@ -48,7 +48,7 @@ docker run --rm -it --privileged zkbolo/disk-eraser-debian:latest
 To run the script :
 
 ```bash
-cd diskEraser/iso && chmod +createIso.sh && sudo bash createIso.sh
+cd diskEraser/iso && chmod +x createIso.sh && sudo bash createIso.sh
 ```
 
 2. **Flash the ISO to a USB key**: Use a tool like dd or Rufus:
