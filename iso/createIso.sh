@@ -14,7 +14,7 @@ KERNEL_VERSION="$(uname -r)"
 # Step 1: Install dependencies on the host system
 echo "Installing necessary tools on the host system..."
 sudo apt-get update
-sudo apt-get install -y live-build genisoimage squashfs-tools debootstrap grub-pc-bin grub2-common python3 python3-pip parted ntfs-3g coreutils dosfstools
+sudo apt-get install -y live-build xorriso squashfs-tools debootstrap grub-pc-bin grub-efi-amd64-bin grub2-common python3 python3-pip parted ntfs-3g coreutils dosfstools
 
 # Step 2: Set up working directories
 echo "Creating working directories..."
@@ -26,7 +26,6 @@ sudo rm -rf "${TARGET_DIR}"/*
 
 # Step 4: Create a minimal Debian system in iso_root using debootstrap
 echo "Installing minimal Debian system using debootstrap..."
-# Using --variant=minbase for a minimal installation
 sudo debootstrap --arch=amd64 --variant=minbase "${DEBIAN_VERSION}" "${TARGET_DIR}" http://deb.debian.org/debian/
 
 # Step 5: Chroot into the system and prepare it for sysvinit
@@ -49,47 +48,78 @@ sudo cp -r ${SCRIPT_DIR}/* "${TARGET_DIR}/root/"
 
 # Step 7: Create startup script to run Python program
 echo "Creating startup script to run Python program..."
-
-# Ensure the directory exists
 sudo chroot "${TARGET_DIR}" mkdir -p /etc/profile.d/
-
-# Create the startup script inside the chroot
 sudo chroot "${TARGET_DIR}" bash -c 'cat <<EOF > /etc/profile.d/startup.sh
 #!/bin/bash
 python3 /root/main.py
 EOF'
-
-# Ensure the script is executable
 sudo chroot "${TARGET_DIR}" chmod +x /etc/profile.d/startup.sh
 
+# Step 8: Install GRUB for BIOS and UEFI booting
+echo "Installing GRUB bootloader..."
+sudo chroot "${TARGET_DIR}" apt-get install -y grub-pc-bin grub-efi-amd64-bin grub2-common
 
-# Step 8: Create GRUB configuration
+# Create necessary directories for GRUB
+sudo mkdir -p "${TARGET_DIR}/boot/grub/i386-pc"
+sudo mkdir -p "${TARGET_DIR}/boot/efi"
+
+# Create necessary directories for GRUB
+sudo mkdir -p "${TARGET_DIR}/boot/grub/i386-pc"
+sudo mkdir -p "${TARGET_DIR}/boot/efi"
+
+# Install GRUB for BIOS
+echo "Creating BIOS El Torito boot image..."
+sudo grub-mkimage \
+    -O i386-pc \
+    -o "${TARGET_DIR}/boot/grub/i386-pc/eltorito.img" \
+    -p "/boot/grub" \
+    biosdisk part_msdos ext2 configfile normal
+
+# Install GRUB for UEFI
+sudo mkdir -p "${TARGET_DIR}/boot/efi/EFI/BOOT"
+sudo grub-mkstandalone \
+    --format=x86_64-efi \
+    --output="${TARGET_DIR}/boot/efi/EFI/BOOT/BOOTX64.EFI" \
+    --modules="part_gpt part_msdos fat ext2 normal configfile linux" \
+    --locales="" \
+    --themes="" \
+    --fonts=""
+
+
+# Step 9: Create GRUB configuration
 echo "Creating GRUB configuration..."
-sudo bash -c 'cat <<EOF > ${GRUB_CFG_DIR}/grub.cfg
+sudo bash -c "cat <<EOF > ${GRUB_CFG_DIR}/grub.cfg
 set timeout=5
 set default=0
 
-menuentry "Secure Disk Eraser" {
+menuentry \"Secure Disk Eraser\" {
     linux /boot/vmlinuz root=/dev/sr0 rw quiet
     initrd /boot/initrd.img
 }
-EOF'
+EOF"
 
-# Step 9: Copy the kernel and initramfs
+# Step 10: Copy the kernel and initramfs
 echo "Copying kernel and initramfs..."
 sudo cp /boot/vmlinuz-${KERNEL_VERSION} "${TARGET_DIR}/boot/vmlinuz"
 sudo cp /boot/initrd.img-${KERNEL_VERSION} "${TARGET_DIR}/boot/initrd.img"
 
-# Step 10: Build the ISO image
-echo "Building the bootable ISO..."
-sudo genisoimage -o "${WORK_DIR}/${ISO_NAME}" \
+# Step 11: Build the ISO image using xorriso
+echo "Building the bootable ISO with xorriso..."
+sudo xorriso -as mkisofs \
+    -o "${WORK_DIR}/${ISO_NAME}" \
     -b boot/grub/i386-pc/eltorito.img \
+    -c boot.catalog \
     -no-emul-boot \
     -boot-load-size 4 \
     -boot-info-table \
-    -iso-level 3 "${TARGET_DIR}"
+    --efi-boot boot/efi/EFI/BOOT/BOOTX64.EFI \
+    -eltorito-alt-boot \
+    -no-emul-boot \
+    -iso-level 3 \
+    "${TARGET_DIR}"
 
-# Step 11: Finished!
+
+# Step 12: Finished!
 echo "Bootable ISO ${ISO_NAME} has been created successfully!"
 
 echo "You can now flash this ISO to a USB drive using the following command:"
