@@ -1,37 +1,25 @@
-# Use Alpine Linux as the base image
-FROM alpine:latest
+# Use the official Debian image from Docker Hub
+FROM debian:latest
 
-# Set environment variables for non-interactive installations
-ENV LANG=fr_FR.UTF-8 \
-    LC_ALL=fr_FR.UTF-8 \
-    PYTHONUNBUFFERED=1
+# Set the working directory in the container
+WORKDIR /app
 
-# Install necessary dependencies, including lsblk (from util-linux)
-RUN apk update && apk add --no-cache \
-    bash \
+# Install necessary packages
+RUN apt-get update -y && \
+    apt-get install -y \
     coreutils \
     parted \
     ntfs-3g \
     python3 \
-    py3-pip \
-    alpine-sdk \
-    util-linux \
-    && echo "export LANG=fr_FR.UTF-8" >> /etc/profile \
-    && echo "export LC_ALL=fr_FR.UTF-8" >> /etc/profile
+    python3-pip \
+    dosfstools && \
+    apt-get clean
 
-# Set the working directory
-WORKDIR /app
+# Copy the entire project into the /app directory in the container
+COPY . /app
 
-# Copy project files into the container
-COPY ./code /app/code
-COPY setup.sh /app/setup.sh
+# Clean up unnecessary files (if any)
+RUN rm -rf /app/setup.sh  # Only if you included the setup.sh script in your COPY command
 
-# Grant execute permissions to setup.sh and run it
-RUN chmod +x /app/setup.sh \
-    && /app/setup.sh
-
-# Grant execute permissions for Python scripts
-RUN chmod +x /app/code/*.py
-
-# Set the entry point
-ENTRYPOINT ["python3", "/app/code/main.py"]
+# Set the default command to run the Python script
+CMD ["python3", "/app/code/main.py"]
