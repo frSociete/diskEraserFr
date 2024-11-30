@@ -30,13 +30,13 @@ The project is designed to run inside a Docker container or as a bootable ISO.
 
 1. **Pull the Docker image from Docker Hub**:
 ```bash
-docker pull <your_username>/disk-eraser:latest
+docker pull zkbolo/disk-eraser-debian:latest
  ```
 
 2. **Run the Docker Image with Necessary Privileges**:
 
 ```bash
-docker run --rm -it --privileged <your_username>/disk-eraser:latest
+docker run --rm -it --privileged zkbolo/disk-eraser-debian:latest
 ```
 
 3. **Follow the interactive instructions inside the container to select and erase a disk**.
