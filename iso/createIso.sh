@@ -28,7 +28,7 @@ sudo debootstrap --arch=amd64 "${DEBIAN_VERSION}" "${TARGET_DIR}" http://deb.deb
 echo "Entering chroot to install dependencies..."
 sudo chroot "${TARGET_DIR}" /bin/bash <<EOF
 apt-get update
-apt-get install -y python3 python3-pip parted ntfs-3g shred
+apt-get install -y python3 python3-pip parted ntfs-3g shred dosfstools
 pip3 install --upgrade pip
 EOF
 

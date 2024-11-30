@@ -1,21 +1,21 @@
 import subprocess
 
-def run_command(command):
+def run_command(command_list):
     try:
-        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(command_list, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return result.stdout.decode('utf-8').strip()
     except subprocess.CalledProcessError as e:
-        print(f"Erreur lors de l'exécution de la commande : {command}")
+        print(f"Error while executing the command: {' '.join(command_list)}")
         print(e.stderr.decode('utf-8'))
         return None
 
 def list_disks():
-    print("Liste des disques disponibles :")
+    print("List of available disks:")
     try:
-        output = run_command("lsblk -d -o NAME,SIZE,TYPE | grep disk")
+        output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE"])
         if output:
             print(output)
         else:
-            print("Aucun disque détecté. Assurez-vous que le programme est exécuté avec les permissions appropriées.")
+            print("No disks detected. Ensure the program is run with appropriate permissions.")
     except Exception as e:
-        print(f"Une erreur s'est produite lors de la récupération des disques : {e}")
+        print(f"An error occurred while retrieving disks: {e}")

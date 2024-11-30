@@ -3,37 +3,62 @@ from disk_erase import erase_disk
 from disk_partition import partition_disk
 from disk_format import format_disk
 from utils import list_disks
+from argparse import ArgumentParser
 
-def main():
-    #List available disks
+def main(fs_choice):
+    # List available disks
     list_disks()
     
-    #Disk selection
-    disk = input("Entrez le disque à effacer (ex: sda, sdb) : ")
+    # Disk selection
+    disk = input("Enter the disk to erase (e.g., sda, sdb): ").strip()
     
-    #Erase disk content
+    # Erase disk content
     erase_disk(disk)
     
-    #Partition disk after data removal
+    # Partition disk after data removal
     partition_disk(disk)
     
-    #Filesystem to install on disk
-    print("Choisissez un système de fichiers pour formater le disque :")
-    print("1. NTFS")
-    print("2. EXT4")
-    fs_choice = int(input("Entrez votre choix (1 ou 2) : "))
+    # Filesystem to install on disk
+    if not fs_choice:
+        print("Choose a filesystem to format the disk:")
+        print("1. NTFS")
+        print("2. EXT4")
+        print("3. VFAT")
+        choice = input("Enter your choice (1, 2, or 3): ").strip()
+        
+        if choice == "1":
+            fs_choice = "ntfs"
+        elif choice == "2":
+            fs_choice = "ext4"
+        elif choice == "3":
+            fs_choice = "vfat"
+        else:
+            print("Invalid choice. Exiting the program.")
+            return
     
-    if fs_choice not in [1, 2]:
-        print("Choix invalide. Arrêt du programme.")
-        return
-    
-    #Format partition using selected filesystem
+    # Format partition using selected filesystem
     format_disk(disk, fs_choice)
-    print("Opération terminée avec succès.")
+    print("Operation completed successfully.")
 
-#Ensure root exécution
-if __name__ == "__main__":
+def sudo_check(args):
     if os.geteuid() != 0:
-        print("Ce script doit être exécuté en tant que root !")
+        print("This script must be run as root!")
     else:
-        main()
+        main(args.f)
+
+def _parse_args():
+    parser = ArgumentParser(description="Secure Disk Eraser Tool")
+    parser.add_argument(
+        '-f', 
+        help="Filesystem type (ext4, ntfs, vfat)",
+        choices=['ext4', 'ntfs', 'vfat'], 
+        required=False
+    )
+    return parser.parse_args()
+
+def app():
+    args = _parse_args()
+    sudo_check(args)
+
+if __name__ == "__main__":
+    app()

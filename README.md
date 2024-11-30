@@ -45,6 +45,12 @@ docker run --rm -it --privileged <your_username>/disk-eraser:latest
 
 1. **Create the ISO: Use the provided Bash script in the project to generate a bootable ISO file**.
 
+To run the script :
+
+```bash
+cd diskEraser/iso && chmod +createIso.sh && sudo bash createIso.sh
+```
+
 2. **Flash the ISO to a USB key**: Use a tool like dd or Rufus:
 
 ```bash
