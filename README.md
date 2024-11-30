@@ -96,5 +96,6 @@ project/
 │   │       ├── main.py         # Main script for running from ISO
 │   │       └── utils.py        # Utilities for the ISO environment
 │   └── createIso.sh            # Script to generate the bootable ISO
-└── setup.sh                    # Script to install dependencies and prepare the project
+├── setup.sh                    # Script to install dependencies and prepare the project
+└── Dockerfile                    # Docker file to build docker image locally
 ```
