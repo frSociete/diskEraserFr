@@ -1,5 +1,4 @@
 #!/bin/bash
 
-mkdir -p /tmp/kernel-packages
-cd /tmp/kernel-packages
+cd ./bootable_iso/tmp_packages/
 sudo apt-get download linux-image-$(uname -r) initramfs-tools
