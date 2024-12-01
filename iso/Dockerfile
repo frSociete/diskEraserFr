@@ -1,9 +1,6 @@
 # Use Debian 12 as base image
 FROM debian:latest
 
-# Set the maintainer label (optional)
-LABEL maintainer="your-email@example.com"
-
 # Update and install required packages
 RUN apt-get update && apt-get install -y \
     live-build \
@@ -19,20 +16,14 @@ RUN apt-get update && apt-get install -y \
     ntfs-3g \
     coreutils \
     dosfstools \
-    git \
     curl \
     wget
 
 # Create directory for kernel packages
 RUN mkdir -p /tmp/kernel-packages
 
-# Download kernel packages
-RUN curl -o /tmp/kernel-packages/linux-image.deb http://deb.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-28-amd64.deb \
-    && curl -o /tmp/kernel-packages/initramfs-tools.deb http://deb.debian.org/debian/pool/main/i/initramfs-tools/initramfs-tools_*.deb
-
-
-# Verify downloaded files
-RUN ls -la /tmp/kernel-packages
+# Copy the kernel packages from the host machine to the container's /tmp/kernel-packages
+COPY /tmp/kernel-packages /tmp/kernel-packages
 
 # Set the working directory to /bootable_iso
 WORKDIR /bootable_iso

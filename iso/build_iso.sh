@@ -108,10 +108,10 @@ cp "${PACKAGE_DIR}"/*.deb "${TARGET_DIR}/tmp/"
 
 # Install the kernel and initramfs inside the chroot
 chroot "${TARGET_DIR}" /bin/bash <<EOF
-cd /tmp
-dpkg -i linux-image-*.deb || apt-get install -f -y
-dpkg -i initramfs-tools*.deb || apt-get install -f -y
+dpkg -i /tmp/kernel-packages/linux-image-6.1.0-28-amd64.deb
+dpkg -i /tmp/kernel-packages/initramfs-tools.deb
 EOF
+
 
 # Determine the installed kernel version
 INSTALLED_KERNEL=$(chroot "${TARGET_DIR}" bash -c "ls /boot/vmlinuz-* | xargs -n1 basename | sed 's/vmlinuz-//'")
