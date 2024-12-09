@@ -1,6 +1,6 @@
 # Disk Eraser - Secure Disk Wiping and Formatting Tool
 
-Disk Eraser is a powerful tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4 or NTFS).
+Disk Eraser is a powerful tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS or VFAT).
 
 The project is designed to run inside a Docker container or as a bootable ISO.
 
@@ -11,7 +11,7 @@ The project is designed to run inside a Docker container or as a bootable ISO.
 - **List Available Disks**: Displays all detected disks for easy selection.
 - **Secure Erase**: Uses random data overwriting to ensure deleted data cannot be recovered.
 - **Automatic Partitioning**: Configures the disk with a single partition after erasure.
-- **Flexible Formatting**: Allows you to format the disk with NTFS or EXT4 file systems.
+- **Flexible Formatting**: Allows you to format the disk with NTFS, EXT4 OR VFAT file systems.
 - **Docker Support**: Designed to run securely in a containerized environment.
 - **Bootable ISO**: Can be converted into a bootable ISO for standalone operation.
 
@@ -30,7 +30,7 @@ The project is designed to run inside a Docker container or as a bootable ISO.
 
 1. **Pull the Docker image from Docker Hub**:
 ```bash
-docker pull zkbolo/disk-eraser-debian:latest
+docker pull zkbolo/disk-eraser-debian:1.0
  ```
 
 2. **Run the Docker Image with Necessary Privileges**:
@@ -73,6 +73,8 @@ When running the project directly in Python or via Docker, you can provide argum
 
 - -f ntfs: Format the disk with the NTFS file system.
 
+- -f vfat: Format the disk with the VFAT file system
+
 Example :
 
 ```bash
@@ -93,15 +95,7 @@ project/
 │   ├── mainParse.py            # Main script with argument parsing
 │   └── utils.py                # Utility functions (e.g., disk listing)
 ├── iso/                        # Files related to creating the bootable ISO
-│   ├── bootable_iso/           # Structure for the bootable ISO
-│   │   ├── iso_root/           # Files required at the root of the ISO
-│   │   └── scripts/            # Scripts used in the ISO environment
-│   │       ├── disk_erase.py   # Copy of the disk erasure script for ISO
-│   │       ├── disk_format.py  # Copy of the disk formatting script for ISO
-│   │       ├── disk_partition.py # Copy of the partitioning script for ISO
-│   │       ├── main.py         # Main script for running from ISO
-│   │       └── utils.py        # Utilities for the ISO environment
-│   └── createIso.sh            # Script to generate the bootable ISO
+│   └── forgeIso.sh            # Script to generate the bootable ISO
 ├── setup.sh                    # Script to install dependencies and prepare the project
 └── Dockerfile                  # Docker file to build docker image locally
 ```
