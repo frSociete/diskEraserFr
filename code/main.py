@@ -19,7 +19,7 @@ def main(fs_choice):
     partition_disk(disk)
     
     # Filesystem to install on disk
-    if not fs_choice:
+    while not fs_choice:
         print("Choose a filesystem to format the disk:")
         print("1. NTFS")
         print("2. EXT4")
@@ -33,8 +33,8 @@ def main(fs_choice):
         elif choice == "3":
             fs_choice = "vfat"
         else:
-            print("Invalid choice. Exiting the program.")
-            return
+            print("Invalid choice. Please select a correct choice from displayed menu.")
+            
     
     # Format partition using selected filesystem
     format_disk(disk, fs_choice)
