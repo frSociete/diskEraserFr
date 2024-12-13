@@ -6,8 +6,8 @@ set -e
 # Variables
 ISO_NAME="custom-debian-live.iso"
 WORK_DIR="$HOME/debian-live-build"
-SCRIPT_PATH="/path/to/your_programi/main.py"
-REQUIRED_PACKAGES="coreutils parted ntfs-3g python3 python3-pip dosfstools"
+CODE_DIR="$HOME/diskEraser/iso/code"  # Path to your Python code directory
+REQUIRED_PACKAGES="coreutils parted ntfs-3g python3 python3-pip dosfstools firmware-linux-free firmware-linux-nonfree"
 
 # Install necessary tools
 echo "Installing live-build..."
@@ -24,19 +24,32 @@ lb config
 
 # Add required packages
 echo "Adding required packages..."
-echo "$REQUIRED_PACKAGES" >> config/package-lists/custom.list.chroot
+echo "$REQUIRED_PACKAGES" > config/package-lists/custom.list.chroot
 
-# Copy the Python script to the ISO filesystem
-echo "Copying the Python script..."
+# Add firmware repository for Debian 12 (Bookworm)
+echo "Configuring APT sources for non-free firmware..."
+mkdir -p config/archives
+cat << EOF > config/archives/debian.list.chroot
+deb http://deb.debian.org/debian bookworm main contrib non-free-firmware
+deb-src http://deb.debian.org/debian bookworm main contrib non-free-firmware
+EOF
+
+# Copy all Python files from the code directory
+echo "Copying Python files..."
 mkdir -p config/includes.chroot/usr/local/bin/
-cp "$SCRIPT_PATH" config/includes.chroot/usr/local/bin/
-chmod +x config/includes.chroot/usr/local/bin/$(basename "$SCRIPT_PATH")
+cp "$CODE_DIR"/*.py config/includes.chroot/usr/local/bin/
+chmod +x config/includes.chroot/usr/local/bin/*.py
 
-# Modify .bashrc for the "user" profile
-echo "Configuring .bashrc to run the program as root..."
+# Modify .bashrc for the "user" profile to run main.py
+echo "Configuring .bashrc to run main.py as root..."
 mkdir -p config/includes.chroot/etc/skel/
 cat << 'EOF' > config/includes.chroot/etc/skel/.bashrc
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Running main.py as root..."
     sudo python3 /usr/local/bin/main.py
+else
+    python3 /usr/local/bin/main.py
+fi
 EOF
 
 # Configure passwordless sudo for the "user" account
@@ -64,4 +77,3 @@ echo "Cleaning up..."
 sudo lb clean
 
 echo "Done."
-
