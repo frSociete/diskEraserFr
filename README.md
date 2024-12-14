@@ -100,8 +100,8 @@ sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
 
 If you prefer not to build the ISO yourself, you can download the pre-built ISO files for your system from the following links:
 
-- [Download the latest version of the ISO (version 2)](http://example.com/download/secure_disk_eraser_v2.iso)
-- [Download the previous version of the ISO (version 1)](http://example.com/download/secure_disk_eraser_v1.iso)
+- [Download the latest version of the ISO (version 2)](https://archive.org/details/diskeraserv2)
+- [Download the previous version of the ISO (version 1)](https://archive.org/details/diskeraser)
 This version can only erase on disk at a time
 
 These ISO files are ready to be flashed to a USB key and used for bootable operations.
