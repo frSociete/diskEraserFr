@@ -4,7 +4,7 @@
 set -e
 
 # Variables
-ISO_NAME="custom-debian-live.iso"
+ISO_NAME="secure_disk_eraser.iso"
 WORK_DIR="$HOME/debian-live-build"
 CODE_DIR="$HOME/diskEraser/iso/code"  # Path to your Python code directory
 REQUIRED_PACKAGES="coreutils parted ntfs-3g python3 python3-pip dosfstools firmware-linux-free firmware-linux-nonfree"

@@ -30,6 +30,18 @@ The project is designed to run inside a Docker container or as a bootable ISO, a
 
 ## Installation and Usage
 
+### Using direct python3 code
+
+1. **Download repo**:
+```bash
+git clone https://github.com/Bolo101/diskEraser.git
+```
+2. **Execute code**:
+```bash
+cd diskEraser/code
+sudo python3 main.py
+```
+
 ### Using with Docker
 
 You have two options for using the Docker container. The first version is `zkbolo/disk-eraser-debian:1.0`, and the newer version is `zkbolo/diseraser-version2:latest`, which includes the latest features and improvements.
@@ -39,6 +51,7 @@ You have two options for using the Docker container. The first version is `zkbol
 ```bash
 docker pull zkbolo/disk-eraser-debian:1.0
 ```
+This version can only erase on disk at a time
 
 2. **Run the Docker Image with Necessary Privileges**:
 ```bash
@@ -67,11 +80,12 @@ docker run --rm -it --privileged zkbolo/diseraser-version2:latest
 1. **Create the ISO**: Use the provided Bash script in the project to generate a bootable ISO file:
 
 ```bash
-cd diskEraser/iso && chmod +x createIso.sh && sudo bash createIso.sh
+cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
 ```
 
 2. **Flash the ISO to a USB key**: Use a tool like `dd` or `Rufus`:
 
+With a terminal to forge USB using **dd** command
 ```bash
 sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
 ```
@@ -88,6 +102,7 @@ If you prefer not to build the ISO yourself, you can download the pre-built ISO 
 
 - [Download the latest version of the ISO (version 2)](http://example.com/download/secure_disk_eraser_v2.iso)
 - [Download the previous version of the ISO (version 1)](http://example.com/download/secure_disk_eraser_v1.iso)
+This version can only erase on disk at a time
 
 These ISO files are ready to be flashed to a USB key and used for bootable operations.
 
