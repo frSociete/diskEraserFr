@@ -3,7 +3,7 @@
 
 **Disk Eraser** is a powerful tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, while ensuring that each disk is wiped thoroughly with random data, making it impossible to recover the erased data.
 
-The project is designed to run inside a Docker container or as a bootable ISO, and it supports user-friendly interaction with multiple disk operations.
+The project is designed to run inside a Docker container or as a bootable ISO, and it supports user-friendly interaction with multiple disk operations. You can also run the python code directly on your computer device.
 
 ---
 
