@@ -6,7 +6,6 @@ from utils import list_disks
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
 def select_disks():
     """
     Display a list of disks and allow the user to select multiple disks for processing.
@@ -16,7 +15,6 @@ def select_disks():
         "Enter the disks to erase (comma-separated, e.g., sda,sdb): "
     ).strip()
     return [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
-
 
 def choose_filesystem():
     """
@@ -38,7 +36,6 @@ def choose_filesystem():
         else:
             print("Invalid choice. Please select a correct option.")
 
-
 def confirm_erasure(disk):
     """
     Display a confirmation prompt before erasing the disk.
@@ -50,7 +47,6 @@ def confirm_erasure(disk):
         if confirmation in {"y", "n"}:
             return confirmation == "y"
         print("Invalid input. Please enter 'y' or 'n'.")
-
 
 def get_disk_confirmations(disks):
     """
@@ -64,15 +60,14 @@ def get_disk_confirmations(disks):
             print(f"Skipping disk: {disk}")
     return confirmed_disks
 
-
-def process_disk(disk, fs_choice):
+def process_disk(disk, fs_choice, passes):
     """
     Erase, partition, and format a disk sequentially.
     """
     print(f"Starting operations on disk: {disk}")
-    
+
     try:
-        erase_disk(disk)
+        erase_disk(disk, passes)
     except Exception as e:
         print(f"Error erasing disk {disk}: {e}")
         return
@@ -91,8 +86,7 @@ def process_disk(disk, fs_choice):
 
     print(f"Completed operations on disk: {disk}")
 
-
-def main(fs_choice=None):
+def main(fs_choice=None, passes=7):
     disks = select_disks()
     if not disks:
         print("No disks selected. Exiting.")
@@ -109,20 +103,18 @@ def main(fs_choice=None):
     print("All disks confirmed for erasure. Starting the operation...\n")
 
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(process_disk, disk, fs_choice) for disk in confirmed_disks]
-        
+        futures = [executor.submit(process_disk, disk, fs_choice, passes) for disk in confirmed_disks]
+
         for future in as_completed(futures):
             future.result()
 
     print("All operations completed successfully.")
 
-
 def sudo_check(args):
     if os.geteuid() != 0:
         print("This script must be run as root!")
     else:
-        main(args.f)
-
+        main(args.f, args.p)
 
 def _parse_args():
     parser = ArgumentParser(description="Secure Disk Eraser Tool")
@@ -132,13 +124,18 @@ def _parse_args():
         choices=['ext4', 'ntfs', 'vfat'], 
         required=False
     )
+    parser.add_argument(
+        '-p',
+        help="Number of random data passes",
+        type=int,
+        default=7,
+        required=False
+    )
     return parser.parse_args()
-
 
 def app():
     args = _parse_args()
     sudo_check(args)
-
 
 if __name__ == "__main__":
     app()

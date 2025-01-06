@@ -1,6 +1,6 @@
 import os
 
-def write_random_data(device, passes=4):
+def write_random_data(device,passes):
     """
     Overwrite the entire device with random data for the specified number of passes.
     """
@@ -45,14 +45,14 @@ def write_zero_data(device):
         print(f"Error while writing zero data to {device}: {e}")
         raise
 
-def erase_disk(disk):
+def erase_disk(disk,passes):
     """
     Securely erase the entire disk by overwriting it with random data and zeros.
     """
     try:
         print(f"Erasing {disk} with multiple random data passes and a final zero pass for security...")
 
-        write_random_data(disk)
+        write_random_data(disk,passes)
 
         write_zero_data(disk)
 
