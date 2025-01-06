@@ -1,9 +1,10 @@
-
 # Disk Eraser - Secure Disk Wiping and Formatting Tool
 
 **Disk Eraser** is a powerful tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, while ensuring that each disk is wiped thoroughly with random data, making it impossible to recover the erased data.
 
-The project is designed to run inside a Docker container or as a bootable ISO, and it supports user-friendly interaction with multiple disk operations. You can also run the python code directly on your computer device.
+The tool operates with pre-selected confirmation and formatting options, requiring no further interaction from the user once the erasure process begins. 
+
+The project is designed to run inside a Docker container, as a bootable ISO, directly as Python code, or as a Linux command stored in `/usr/local/bin` under the name `diskeraser`.
 
 ---
 
@@ -14,10 +15,11 @@ The project is designed to run inside a Docker container or as a bootable ISO, a
 - **Parallel Erasure**: Allows simultaneous erasure of multiple disks with multi-threading.
 - **Automatic Partitioning**: Configures the disk with a single partition after erasure.
 - **Flexible Formatting**: Format the disk with NTFS, EXT4, or VFAT file systems.
-- **Confirmation Prompts**: Ensures user confirmation before proceeding with any operation, preventing accidental data loss.
+- **Non-Interactive Mode**: All confirmation prompts and filesystem format options are selected before the process starts, and no user interaction is required during the erasure.
 - **Docker Support**: Can be securely run in a containerized environment.
 - **Bootable ISO**: Can be converted into a bootable ISO for standalone operation.
-  
+- **Command Line Utility**: Can be installed as a Linux command (`diskeraser`) for ease of use.
+
 ---
 
 ## Prerequisites
@@ -42,25 +44,40 @@ cd diskEraser/code
 sudo python3 main.py
 ```
 
+### Install as a Linux Command (`diskeraser`)
+
+1. **Copy the scripts to `/usr/local/bin`**:
+```bash
+sudo mkdir -p /usr/local/bin/diskeraser
+sudo cp diskEraser/code/*.py /usr/local/bin/diskeraser
+sudo chmod +x /usr/local/bin/diskeraser/main.py
+sudo ln -s /usr/local/bin/diskeraser/main.py /usr/local/bin/diskeraser
+```
+2. **Run the tool**:
+```bash
+sudo diskeraser
+```
+This allows you to execute the tool as a simple command from anywhere on your system.
+
 ### Using with Docker
 
-You have two options for using the Docker container. The first version is `zkbolo/disk-eraser-debian:1.0`, and the newer version is `zkbolo/diseraser-version2:latest`, which includes the latest features and improvements.
+You have two options for using the Docker container. The first version is `zkbolo/disk-eraser-debian:1.0`, and the newer version is `zkbolo/diskeraser-v2.1:latest`, which includes the latest features and improvements.
 
 #### Version 1.0 (Old Version)
 1. **Pull the Docker image from Docker Hub**:
 ```bash
 docker pull zkbolo/disk-eraser-debian:1.0
 ```
-This version can only erase on disk at a time
+This version can only erase one disk at a time.
 
 2. **Run the Docker Image with Necessary Privileges**:
 ```bash
 docker run --rm -it --privileged zkbolo/disk-eraser-debian:1.0
 ```
 
-3. **Follow the interactive instructions inside the container to select and erase one or more disks**.
+3. **Follow the interactive instructions inside the container to select and erase a disk**.
 
-#### Version 2.0 (New Version)
+#### Version 2.1 (New Version)
 1. **Pull the latest Docker image**:
 ```bash
 docker pull zkbolo/diskeraser-v2.1:latest
@@ -102,7 +119,7 @@ If you prefer not to build the ISO yourself, you can download the pre-built ISO 
 
 - [Download the latest version of the ISO (version 2)](https://archive.org/details/diskeraserv2)
 - [Download the previous version of the ISO (version 1)](https://archive.org/details/diskeraser)
-This version can only erase on disk at a time
+This version can only erase one disk at a time.
 
 These ISO files are ready to be flashed to a USB key and used for bootable operations.
 
@@ -153,4 +170,5 @@ project/
 
 - **Disk Safety**: The tool **permanently erases** data from the selected disks. Make sure you have backups of any important data before proceeding.
 - **Root Access**: Ensure you are running the program with sufficient privileges to access and modify disks (i.e., root or `sudo`).
+- **Non-Interactive Operation**: Once the erasure process begins, no further user interaction is required. All confirmation prompts and formatting options are selected beforehand.
 - **Small Disks**: If you are erasing very small disks, the tool may skip partitioning or formatting operations if the disk is too small to handle them.
