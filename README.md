@@ -63,12 +63,12 @@ docker run --rm -it --privileged zkbolo/disk-eraser-debian:1.0
 #### Version 2.0 (New Version)
 1. **Pull the latest Docker image**:
 ```bash
-docker pull zkbolo/diskeraser-version2:latest
+docker pull zkbolo/diskeraser-v2.1:latest
 ```
 
 2. **Run the Docker Image with Necessary Privileges**:
 ```bash
-docker run --rm -it --privileged zkbolo/diskeraser-version2:latest
+docker run --rm -it --privileged zkbolo/diskeraser-v2.1:latest
 ```
 
 3. **Follow the interactive instructions inside the container to select and erase one or more disks**:
