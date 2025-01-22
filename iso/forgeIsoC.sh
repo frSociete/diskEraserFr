@@ -6,13 +6,14 @@ set -e
 # Variables
 ISO_NAME="secure_disk_eraser.iso"
 WORK_DIR="$HOME/debian-live-build"
-CODE_DIR="$HOME/diskEraser/iso/code"  # Path to your Python code directory
-REQUIRED_PACKAGES="coreutils parted ntfs-3g python3 python3-pip dosfstools firmware-linux-free firmware-linux-nonfree"
+CODE_DIR="$HOME/diskEraser/code/c"  # Path to your C code directory
+ELF_BINARY="disk_tool"  # ELF binary to execute
+REQUIRED_PACKAGES="coreutils parted ntfs-3g dosfstools firmware-linux-free firmware-linux-nonfree"
 
 # Install necessary tools
 echo "Installing live-build..."
 sudo apt update
-sudo apt install -y live-build python3 python3-pip
+sudo apt install -y live-build
 
 # Create working directory
 echo "Setting up live-build workspace..."
@@ -34,21 +35,31 @@ deb http://deb.debian.org/debian bookworm main contrib non-free-firmware
 deb-src http://deb.debian.org/debian bookworm main contrib non-free-firmware
 EOF
 
-# Copy all Python files from the code directory
-echo "Copying Python files..."
-mkdir -p config/includes.chroot/usr/local/bin/
-cp "$CODE_DIR"/*.py config/includes.chroot/usr/local/bin/
-chmod +x config/includes.chroot/usr/local/bin/*.py
+# Set keyboard layout to AZERTY
+echo "Configuring AZERTY keyboard layout..."
+mkdir -p config/includes.chroot/etc/default/
+cat << EOF > config/includes.chroot/etc/default/keyboard
+XKBMODEL="pc105"
+XKBLAYOUT="fr"
+XKBVARIANT="azerty"
+XKBOPTIONS=""
+EOF
 
-# Modify .bashrc for the "user" profile to run main.py
-echo "Configuring .bashrc to run main.py as root..."
+# Copy the ELF binary to /usr/local/bin
+echo "Copying ELF binary..."
+mkdir -p config/includes.chroot/usr/local/bin/
+cp "$CODE_DIR/$ELF_BINARY" config/includes.chroot/usr/local/bin/
+chmod +x config/includes.chroot/usr/local/bin/$ELF_BINARY
+
+# Configure .bashrc to execute the ELF binary as root
+echo "Configuring .bashrc to execute the ELF binary..."
 mkdir -p config/includes.chroot/etc/skel/
 cat << 'EOF' > config/includes.chroot/etc/skel/.bashrc
 if [ "$(id -u)" -ne 0 ]; then
-    echo "Running main.py as root..."
-    sudo python3 /usr/local/bin/main.py
+    echo "Running disk_tool as root..."
+    sudo /usr/local/bin/disk_tool
 else
-    python3 /usr/local/bin/main.py
+    /usr/local/bin/disk_tool
 fi
 EOF
 
