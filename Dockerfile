@@ -18,7 +18,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the entire project into the /app directory in the container
-COPY ./code /app
+COPY ./code/python /app
 
 # Set the default command to run the Python script
 CMD ["python3", "/app/main.py"]
