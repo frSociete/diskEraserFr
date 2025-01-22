@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 from disk_erase import erase_disk
 from disk_partition import partition_disk
