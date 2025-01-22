@@ -40,7 +40,7 @@ git clone https://github.com/Bolo101/diskEraser.git
 ```
 2. **Execute code**:
 ```bash
-cd diskEraser/code
+cd diskEraser/code/python
 sudo python3 main.py
 ```
 
@@ -49,7 +49,7 @@ sudo python3 main.py
 1. **Copy the scripts to `/usr/local/bin`**:
 ```bash
 sudo mkdir -p /usr/local/bin/diskeraser
-sudo cp diskEraser/code/*.py /usr/local/bin/diskeraser
+sudo cp diskEraser/code/python/*.py /usr/local/bin/diskeraser
 sudo chmod +x /usr/local/bin/diskeraser/main.py
 sudo ln -s /usr/local/bin/diskeraser/main.py /usr/local/bin/diskeraser
 ```
@@ -59,23 +59,45 @@ sudo diskeraser
 ```
 This allows you to execute the tool as a simple command from anywhere on your system.
 
+### Using C compiled code
+
+1. **Navigate to the C code directory**:
+   ```bash
+   cd diskEraser/code/c
+   ```
+
+2. **Compile the program**:
+   ```bash
+   gcc -o disk_tool main.c disk_erase.c disk_partition.c disk_format.c utils.c -lpthread
+   ```
+
+   This will generate the executable file named `disk_tool`.
+
+3. **Run the tool**:
+   ```bash
+   sudo ./disk_tool
+   ```
+
+   - The program will display the available disks and prompt you to select one for erasure.
+   - It will also ask you to choose a file system for formatting (EXT4, NTFS, or VFAT).
+   - The number of random data passes is fixed to 6 by default.
+
+4. **Move the compiled binary to a convenient location (optional)**:
+   ```bash
+   sudo mv disk_tool /usr/local/bin/disk_tool
+   ```
+
+   Now, you can execute the program from anywhere using:
+   ```bash
+   sudo disk_tool
+   
+
 ### Using with Docker
 
-You have two options for using the Docker container. The first version is `zkbolo/disk-eraser-debian:1.0`, and the newer version is `zkbolo/diskeraser-v2.1:latest`, which includes the latest features and improvements.
+You can also deploy a Docker container to use the disks eraser tool. If Docker is not install on your system, you can execute the **installDocker.sh** script on a Debian based system. 
+[Install Docker Script](https://github.com/Bolo101/Qemu.sh)
 
-#### Version 1.0 (Old Version)
-1. **Pull the Docker image from Docker Hub**:
-```bash
-docker pull zkbolo/disk-eraser-debian:1.0
-```
-This version can only erase one disk at a time.
-
-2. **Run the Docker Image with Necessary Privileges**:
-```bash
-docker run --rm -it --privileged zkbolo/disk-eraser-debian:1.0
-```
-
-3. **Follow the interactive instructions inside the container to select and erase a disk**.
+For other distributions please access the Docker download page.
 
 #### Version 2.1 (New Version)
 1. **Pull the latest Docker image**:
@@ -100,6 +122,15 @@ docker run --rm -it --privileged zkbolo/diskeraser-v2.1:latest
 cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
 ```
 
+If you prefer not to build the ISO yourself, you can download the pre-built ISO files for your system from the following links:
+
+- [Download the latest version of the ISO (version 2.1)](https://archive.org/details/diskeraser-v2.1)
+- [Download the previous version of the ISO (version 1)](https://archive.org/details/diskeraser)
+
+These ISO files are ready to be flashed to a USB key and used for bootable operations.
+
+---
+
 2. **Flash the ISO to a USB key**: Use a tool like `dd` or `Rufus`:
 
 With a terminal to forge USB using **dd** command
@@ -110,18 +141,6 @@ sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
 3. **Boot from the USB key**:
    - Configure your BIOS/UEFI to boot from the USB key.
    - Follow the on-screen instructions to use the tool, select the disks to erase, and choose a file system for formatting.
-
----
-
-## ISO Download Links
-
-If you prefer not to build the ISO yourself, you can download the pre-built ISO files for your system from the following links:
-
-- [Download the latest version of the ISO (version 2.1)](https://archive.org/details/diskeraser-v2.1)
-- [Download the previous version of the ISO (version 1)](https://archive.org/details/diskeraser)
-This version can only erase one disk at a time.
-
-These ISO files are ready to be flashed to a USB key and used for bootable operations.
 
 ---
 
@@ -172,3 +191,22 @@ project/
 - **Root Access**: Ensure you are running the program with sufficient privileges to access and modify disks (i.e., root or `sudo`).
 - **Non-Interactive Operation**: Once the erasure process begins, no further user interaction is required. All confirmation prompts and formatting options are selected beforehand.
 - **Small Disks**: If you are erasing very small disks, the tool may skip partitioning or formatting operations if the disk is too small to handle them.
+
+## License
+
+This project is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+![Creative Commons License](https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png)
+
+You are free to:
+- Share: Copy and redistribute the material in any medium or format.
+- Adapt: Remix, transform, and build upon the material.
+
+Under the following terms:
+- **Attribution**: You must give appropriate credit, provide a link to the license, and indicate if changes were made.
+- **NonCommercial**: You may not use the material for commercial purposes.
+- **ShareAlike**: If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+
+For more details, see the [license terms](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+---
