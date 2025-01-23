@@ -68,7 +68,7 @@ This allows you to execute the tool as a simple command from anywhere on your sy
 
 2. **Compile the program**:
    ```bash
-   gcc -o disk_tool main.c disk_erase.c disk_partition.c disk_format.c utils.c -lpthread
+   gcc -o disk_tool main.c disk_erase.c disk_partition.c disk_format.c utils.c -std=c11
    ```
 
    This will generate the executable file named `disk_tool`.
