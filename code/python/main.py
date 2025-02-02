@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import logging
 from disk_erase import erase_disk,zero_disk
 from disk_partition import partition_disk
@@ -62,7 +63,8 @@ def main(fs_choice=None, passes=7):
 
 def sudo_check(args):
     if os.geteuid() != 0:
-        logging.info("This script must be run as root!")
+        logging.error("This script must be run as root!")
+        sys.exit(3)
     else:
         main(args.f, args.p)
 

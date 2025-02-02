@@ -1,6 +1,7 @@
 import logging
 from utils import run_command
 import subprocess
+import sys
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -20,6 +21,8 @@ def format_disk(disk, fs_choice):
 
         logging.info(f"Partition {partition} formatted successfully.")
     except FileNotFoundError:
-        logging.info(f"Error: Filesystem utility not found for {fs_choice}. Ensure necessary tools are installed.")
+        logging.error(f"Error: Filesystem utility not found for {fs_choice}. Ensure necessary tools are installed.")
+        sys.exit(2)
     except subprocess.CalledProcessError:
-        logging.info(f"Error: Failed to format {partition}.")
+        logging.error(f"Error: Failed to format {partition}.")
+        sys.exit(1)
