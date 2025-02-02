@@ -1,21 +1,31 @@
 import subprocess
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def run_command(command_list):
     try:
         result = subprocess.run(command_list, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return result.stdout.decode('utf-8').strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Error while executing the command: {' '.join(command_list)}")
-        print(e.stderr.decode('utf-8'))
-        return None
+    except FileNotFoundError:
+        logging.error(f"Error: Command not found: {' '.join(command_list)}")
+        sys.exit(2)
+    except subprocess.CalledProcessError:
+        logging.error(f"Error: Command execution failed: {' '.join(command_list)}")
+        sys.exit(1)
 
 def list_disks():
-    print("List of available disks:")
+    logging.info("List of available disks:")
     try:
         output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE"])
         if output:
-            print(output)
+            logging.info(output)
         else:
-            print("No disks detected. Ensure the program is run with appropriate permissions.")
-    except Exception as e:
-        print(f"An error occurred while retrieving disks: {e}")
+            logging.info("No disks detected. Ensure the program is run with appropriate permissions.")
+    except FileNotFoundError:
+        logging.error("Error: `lsblk` command not found. Install `util-linux` package.")
+        sys.exit(2)
+    except subprocess.CalledProcessError:
+        logging.error("Error: Failed to retrieve disk information.")
+        sys.exit(1)
