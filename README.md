@@ -1,44 +1,51 @@
-# Disk Eraser - Secure Disk Wiping and Formatting Tool
+# Disk Eraser - Secure Disk Wiping and Formatting Tool  
 
-**Disk Eraser** is a powerful tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, while ensuring that each disk is wiped thoroughly with random data, making it impossible to recover the erased data.
+**Disk Eraser** is a tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, ensuring thorough data wiping with multiple overwrite passes.  
 
-The tool operates with pre-selected confirmation and formatting options, requiring no further interaction from the user once the erasure process begins. 
+The tool operates with pre-selected confirmation and formatting options, requiring no further interaction from the user once the erasure process begins.  
 
-The project is designed to run inside a Docker container, as a bootable ISO, directly as Python code, or as a Linux command stored in `/usr/local/bin` under the name `diskeraser`.
-
----
-
-## Features
-
-- **List Available Disks**: Displays all detected disks for easy selection and allows the user to erase one or more disks.
-- **Secure Erase**: Uses multiple passes of random data to overwrite existing data and a final zero pass to ensure data cannot be recovered.
-- **Parallel Erasure**: Allows simultaneous erasure of multiple disks with multi-threading.
-- **Automatic Partitioning**: Configures the disk with a single partition after erasure.
-- **Flexible Formatting**: Format the disk with NTFS, EXT4, or VFAT file systems.
-- **Non-Interactive Mode**: All confirmation prompts and filesystem format options are selected before the process starts, and no user interaction is required during the erasure.
-- **Docker Support**: Can be securely run in a containerized environment.
-- **Bootable ISO**: Can be converted into a bootable ISO for standalone operation.
-- **Command Line Utility**: Can be installed as a Linux command (`diskeraser`) for ease of use.
+The project is designed to run inside a Docker container, as a bootable ISO, directly as Python code, or as a Linux command stored in `/usr/local/bin` under the name `diskeraser`.  
 
 ---
 
-## Prerequisites
+## Features  
 
-- Docker installed on your system (for running in a container).
-- Root privileges (required for disk access).
-- Basic understanding of disk management and caution, as the tool will permanently erase data.
+- **List Available Disks**: Displays all detected disks for easy selection and allows the user to erase one or more disks.  
+- **Secure Erase**: Uses multiple passes of random data followed by a final zero pass to prevent data recovery.  
+- **Parallel Erasure**: Uses multi-threading to erase multiple disks simultaneously, optimizing performance.  
+- **Automatic Partitioning**: Configures the disk with a single partition after erasure.  
+- **Flexible Formatting**: Supports NTFS, EXT4, or VFAT file systems.  
+- **Non-Interactive Mode**: Erasure and formatting options are pre-selected, eliminating the need for user input during execution.  
+- **Docker Support**: Runs securely in a containerized environment.  
+- **Bootable ISO**: Can be converted into a bootable ISO for standalone operation.  
+- **Command Line Utility**: Can be installed as a Linux command (`diskeraser`) for ease of use.  
+- **Configurable Erase Passes**: Users can specify the number of overwrite passes (default is 6).  
+- **Error Handling and Logging**: Logs errors, including permission issues and failed disk operations.  
+- **Automatic Disk Verification**: Confirms the integrity of the disk after the erasure process.  
+- **Root Privilege Check**: Ensures the tool runs with proper administrative permissions to prevent incomplete operations.  
 
 ---
 
-## Installation and Usage
+## Prerequisites  
 
-### Using direct python3 code
+- **Root privileges** (required for disk access).  
+- **Docker** (if running inside a container).  
+- **GCC Compiler** (if compiling the C version).  
+- **Basic disk management knowledge**, as the tool **permanently erases data**.  
 
-1. **Download repo**:
+---
+
+## Installation and Usage  
+
+### Using Direct Python Code  
+
+1. **Download the repository**:  
+
 ```bash
 git clone https://github.com/Bolo101/diskEraser.git
 ```
 2. **Execute code**:
+
 ```bash
 cd diskEraser/code/python
 sudo python3 main.py
@@ -54,6 +61,7 @@ sudo chmod +x /usr/local/bin/diskeraser/main.py
 sudo ln -s /usr/local/bin/diskeraser/main.py /usr/local/bin/diskeraser
 ```
 2. **Run the tool**:
+
 ```bash
 sudo diskeraser
 ```
@@ -62,35 +70,42 @@ This allows you to execute the tool as a simple command from anywhere on your sy
 ### Using C compiled code
 
 1. **Navigate to the C code directory**:
-   ```bash
-   cd diskEraser/code/c
-   ```
+
+```bash
+cd diskEraser/code/c
+```
 
 2. **Compile the program**:
-   ```bash
-   gcc -o disk_tool main.c disk_erase.c disk_partition.c disk_format.c utils.c -std=c11
-   ```
 
-   This will generate the executable file named `disk_tool`.
+```bash
+gcc -o disk_tool main.c disk_erase.c disk_partition.c disk_format.c utils.c -std=c11
+```
+
+This will generate the executable file named `disk_tool`.
 
 3. **Run the tool**:
-   ```bash
-   sudo ./disk_tool
-   ```
 
-   - The program will display the available disks and prompt you to select one for erasure.
-   - It will also ask you to choose a file system for formatting (EXT4, NTFS, or VFAT).
-   - The number of random data passes is fixed to 6 by default.
+```bash
+sudo ./disk_tool
+```
+
+- The program will display the available disks and prompt you to select one for erasure.
+
+- It will also ask you to choose a file system for formatting (EXT4, NTFS, or VFAT).
+
+- The number of random data passes is fixed to 6 by default.
 
 4. **Move the compiled binary to a convenient location (optional)**:
-   ```bash
-   sudo mv disk_tool /usr/local/bin/disk_tool
-   ```
 
-   Now, you can execute the program from anywhere using:
-   ```bash
-   sudo disk_tool
-   
+```bash
+sudo mv disk_tool /usr/local/bin/disk_tool
+```
+
+Now, you can execute the program from anywhere using:
+
+```bash
+sudo ./disk_tool
+```   
 
 ### Using with Docker
 
@@ -100,19 +115,24 @@ You can also deploy a Docker container to use the disks eraser tool. If Docker i
 For other distributions please access the Docker download page.
 
 #### Version 2.1 (New Version)
+
 1. **Pull the latest Docker image**:
+
 ```bash
 docker pull zkbolo/diskeraser-v2.1:latest
 ```
 
 2. **Run the Docker Image with Necessary Privileges**:
+
 ```bash
 docker run --rm -it --privileged zkbolo/diskeraser-v2.1:latest
 ```
 
 3. **Follow the interactive instructions inside the container to select and erase one or more disks**:
-   - The tool will list all available disks, allow you to select which ones to erase, and confirm before starting the erasure process.
-   - You will also be prompted to choose a file system (EXT4, NTFS, or VFAT) after erasure.
+
+- The tool will list all available disks, allow you to select which ones to erase, and confirm before starting the erasure process.
+
+- You will also be prompted to choose a file system (EXT4, NTFS, or VFAT) after erasure.
 
 ### Using the Bootable ISO
 
@@ -139,8 +159,10 @@ sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
 ```
 
 3. **Boot from the USB key**:
-   - Configure your BIOS/UEFI to boot from the USB key.
-   - Follow the on-screen instructions to use the tool, select the disks to erase, and choose a file system for formatting.
+
+- Configure your BIOS/UEFI to boot from the USB key.
+
+- Follow the on-screen instructions to use the tool, select the disks to erase, and choose a file system for formatting.
 
 ---
 
@@ -149,6 +171,7 @@ sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
 When running the project directly in Python or via Docker, you can provide arguments to automate certain steps:
 
 **Select file system**:
+
 - `-f ext4`: Format the disk with the EXT4 file system.
 - `-f ntfs`: Format the disk with the NTFS file system.
 - `-f vfat`: Format the disk with the VFAT file system.

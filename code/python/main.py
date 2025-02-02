@@ -3,7 +3,7 @@
 import os
 import sys
 import logging
-from disk_erase import erase_disk,zero_disk
+from disk_erase import erase_disk
 from disk_partition import partition_disk
 from disk_format import format_disk
 from utils import list_disks
