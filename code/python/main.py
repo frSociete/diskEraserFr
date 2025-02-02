@@ -64,7 +64,7 @@ def main(fs_choice=None, passes=7):
 def sudo_check(args):
     if os.geteuid() != 0:
         logging.error("This script must be run as root!")
-        sys.exit(3)
+        sys.exit(1)
     else:
         main(args.f, args.p)
 
