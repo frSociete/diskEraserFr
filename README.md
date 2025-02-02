@@ -114,18 +114,18 @@ You can also deploy a Docker container to use the disks eraser tool. If Docker i
 
 For other distributions please access the Docker download page.
 
-#### Version 2.1 (New Version)
+#### Version 2.3 (New Version)
 
 1. **Pull the latest Docker image**:
 
 ```bash
-docker pull zkbolo/diskeraser-v2.1:latest
+docker pull zkbolo/diskeraser-v2.3:latest
 ```
 
 2. **Run the Docker Image with Necessary Privileges**:
 
 ```bash
-docker run --rm -it --privileged zkbolo/diskeraser-v2.1:latest
+docker run --rm -it --privileged zkbolo/diskeraser-v2.3:latest
 ```
 
 3. **Follow the interactive instructions inside the container to select and erase one or more disks**:
