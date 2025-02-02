@@ -1,61 +1,46 @@
 import os
+import subprocess
+import logging
 
-def write_random_data(device,passes):
-    """
-    Overwrite the entire device with random data for the specified number of passes.
-    """
-    block_size = 4096
-    try:
-        with open(f"/dev/{device}", "wb") as disk:
-            disk_size = os.lseek(disk.fileno(), 0, os.SEEK_END)
-            os.lseek(disk.fileno(), 0, os.SEEK_SET)
-            for pass_num in range(passes):
-                print(f"Writing random data pass {pass_num + 1} to {device}...")
-                written = 0
-                while written < disk_size:
-                    remaining = disk_size - written
-                    to_write = min(block_size, remaining)
-                    disk.write(os.urandom(to_write))
-                    written += to_write
-                disk.flush()
-                os.lseek(disk.fileno(), 0, os.SEEK_SET)
-    except Exception as e:
-        print(f"Error while writing random data to {device}: {e}")
-        raise
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def write_zero_data(device):
+def is_ssd(device):
     """
-    Overwrite the entire device with zeros.
-    """
-    block_size = 4096
-    try:
-        with open(f"/dev/{device}", "wb") as disk:
-            disk_size = os.lseek(disk.fileno(), 0, os.SEEK_END)
-            os.lseek(disk.fileno(), 0, os.SEEK_SET)
-
-            print(f"Writing final zero pass to {device}...")
-            written = 0
-            while written < disk_size:
-                remaining = disk_size - written
-                to_write = min(block_size, remaining)
-                disk.write(b"\x00" * to_write)
-                written += to_write
-            disk.flush()
-    except Exception as e:
-        print(f"Error while writing zero data to {device}: {e}")
-        raise
-
-def erase_disk(disk,passes):
-    """
-    Securely erase the entire disk by overwriting it with random data and zeros.
+    Check if the given device is an SSD.
     """
     try:
-        print(f"Erasing {disk} with multiple random data passes and a final zero pass for security...")
+        output = subprocess.run(
+            ["cat", f"/sys/block/{device}/queue/rotational"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        return output.stdout.decode().strip() == "0"
+    except FileNotFoundError:
+        logging.info(f"SSD check failed: {device} not found.")
+    except subprocess.SubprocessError:
+        logging.info(f"Error executing subprocess for SSD check on {device}.")
+    return False
 
-        write_random_data(disk,passes)
+def erase_disk(device, passes):
+    """
+    Securely erase the entire disk using `shred`, then wipe the partition table using `dd`.
+    """
+    try:
+        if is_ssd(device):
+            logging.info(f"Warning: {device} appears to be an SSD. Use `hdparm` for secure erase.")
+            return
 
-        write_zero_data(disk)
+        logging.info(f"Erasing {device} using shred with {passes} passes...")
 
-        print(f"Disk {disk} successfully erased with random data and zeros.")
-    except Exception as e:
-        print(f"Failed to erase disk {disk}: {e}")
+        # Loop through each pass and call shred, printing progress
+        for i in range(1, passes + 1):
+            logging.info(f"Pass {i} of {passes} is being processed...")
+            subprocess.run(["shred", "-n", "1", "-z", f"/dev/{device}"], check=True)
+
+        logging.info(f"Wiping partition table of {device} using dd...")
+        subprocess.run(["dd", "if=/dev/zero", f"of=/dev/{device}", "bs=1M", "count=10"], check=True)
+
+        logging.info(f"Disk {device} successfully erased.")
+    except subprocess.CalledProcessError:
+        logging.error(f"Error: Failed to erase {device} using shred or dd.")
