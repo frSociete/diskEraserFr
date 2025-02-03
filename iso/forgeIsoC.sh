@@ -6,7 +6,7 @@ set -e
 # Variables
 ISO_NAME="secure_disk_eraser.iso"
 WORK_DIR="$HOME/debian-live-build"
-CODE_DIR="$HOME/diskEraser/code/c"  # Path to your C code directory
+CODE_DIR="$HOME/diskEraser/code/c/src"  # Path to your C code directory
 ELF_BINARY="disk_tool"  # ELF binary to execute
 REQUIRED_PACKAGES="coreutils parted ntfs-3g dosfstools firmware-linux-free firmware-linux-nonfree"
 
