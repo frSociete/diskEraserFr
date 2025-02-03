@@ -20,7 +20,7 @@ mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
 # Initialize live-build
-lb config
+lb config --distribution bookworm
 
 # Add required packages
 echo "Adding required packages..."
