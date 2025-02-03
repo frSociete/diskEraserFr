@@ -3,4 +3,4 @@
 
 void format_disk(const char *disk, const char *fs_choice);
 
-#endif // DISK_FORMAT_H
+#endif
