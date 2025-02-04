@@ -6,7 +6,7 @@ set -e
 # Variables
 ISO_NAME="secure_disk_eraser.iso"
 WORK_DIR="$HOME/debian-live-build"
-CODE_DIR="$HOME/diskEraser/code/c/src"  # Path to your C code directory
+CODE_DIR="$HOME/diskEraser/code/c"  # Path to your C code directory
 ELF_BINARY="disk_tool"  # ELF binary to execute
 REQUIRED_PACKAGES="coreutils parted ntfs-3g dosfstools firmware-linux-free firmware-linux-nonfree"
 
@@ -20,18 +20,16 @@ echo "Setting up live-build workspace..."
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
-# Initialize live-build with Debian Bookworm
-echo "Configuring live-build for Debian Bookworm..."
-lb config --distribution bookworm
+# Initialize live-build
+lb config
 
 # Add required packages
 echo "Adding required packages..."
-mkdir -p config/package-lists/
 echo "$REQUIRED_PACKAGES" > config/package-lists/custom.list.chroot
 
 # Add firmware repository for Debian 12 (Bookworm)
 echo "Configuring APT sources for non-free firmware..."
-mkdir -p config/archives/
+mkdir -p config/archives
 cat << EOF > config/archives/debian.list.chroot
 deb http://deb.debian.org/debian bookworm main contrib non-free-firmware
 deb-src http://deb.debian.org/debian bookworm main contrib non-free-firmware

@@ -9,6 +9,7 @@ from disk_format import format_disk
 from utils import list_disks
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from subprocess import CalledProcessError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -35,10 +36,10 @@ def process_disk(disk, fs_choice, passes):
         partition_disk(disk)
         format_disk(disk, fs_choice)
         logging.info(f"Completed operations on disk: {disk}")
-    except (FileNotFoundError, subprocess.CalledProcessError):
+    except (FileNotFoundError, CalledProcessError):
         logging.info(f"Error processing disk {disk}.")
     
-def main(fs_choice=None, passes=7):
+def main(fs_choice : str,passes : int):
     disks = select_disks()
     if not disks:
         logging.info("No disks selected. Exiting.")
@@ -71,7 +72,7 @@ def sudo_check(args):
 def _parse_args():
     parser = ArgumentParser(description="Secure Disk Eraser Tool")
     parser.add_argument('-f', choices=['ext4', 'ntfs', 'vfat'], required=False)
-    parser.add_argument('-p', type=int, default=6, required=False)
+    parser.add_argument('-p', type=int, default=5, required=False)
     return parser.parse_args()
 
 def app():
