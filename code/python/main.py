@@ -18,6 +18,27 @@ def select_disks():
     selected_disks = input("Enter the disks to erase (comma-separated, e.g., sda,sdb): ").strip()
     return [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
 
+def choose_filesystem():
+    """
+    Prompt the user to choose a filesystem.
+    """
+    while True:
+        print("Choose a filesystem to format the disks:")
+        print("1. NTFS")
+        print("2. EXT4")
+        print("3. VFAT")
+        choice = input("Enter your choice (1, 2, or 3): ").strip()
+
+        if choice == "1":
+            return "ntfs"
+        elif choice == "2":
+            return "ext4"
+        elif choice == "3":
+            return "vfat"
+        else:
+            print("Invalid choice. Please select a correct option.")
+
+
 def confirm_erasure(disk):
     while True:
         confirmation = input(f"Are you sure you want to securely erase {disk}? This cannot be undone. (y/n): ").strip().lower()
@@ -51,7 +72,7 @@ def main(fs_choice : str,passes : int):
         return
 
     if not fs_choice:
-        fs_choice = input("Choose filesystem (ntfs, ext4, vfat): ").strip().lower()
+        fs_choice = choose_filesystem()
 
     logging.info("All disks confirmed. Starting operations...\n")
 

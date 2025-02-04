@@ -106,10 +106,12 @@ chmod +x config/includes.chroot/usr/local/bin/*
 # Create symbolic link 'de' -> main.py
 ln -s /usr/local/bin/main.py config/includes.chroot/usr/local/bin/de
 
-# Configure .bashrc to run main.py on login
-echo "Configuring .bashrc to run main.py as root..."
+# Configure .bashrc to run main.py on login and display message
+echo "Configuring .bashrc to run main.py as root and show message..."
 mkdir -p config/includes.chroot/etc/skel/
 cat << 'EOF' > config/includes.chroot/etc/skel/.bashrc
+echo "Type 'sudo de' to use the diskEraser program"
+
 if [ "$(id -u)" -ne 0 ]; then
     echo "Running main.py as root..."
     sudo python3 /usr/local/bin/main.py
