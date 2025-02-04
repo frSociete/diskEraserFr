@@ -9,6 +9,7 @@ from disk_format import format_disk
 from utils import list_disks
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from subprocess import CalledProcessError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -16,6 +17,27 @@ def select_disks():
     list_disks()
     selected_disks = input("Enter the disks to erase (comma-separated, e.g., sda,sdb): ").strip()
     return [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
+
+def choose_filesystem():
+    """
+    Prompt the user to choose a filesystem.
+    """
+    while True:
+        print("Choose a filesystem to format the disks:")
+        print("1. NTFS")
+        print("2. EXT4")
+        print("3. VFAT")
+        choice = input("Enter your choice (1, 2, or 3): ").strip()
+
+        if choice == "1":
+            return "ntfs"
+        elif choice == "2":
+            return "ext4"
+        elif choice == "3":
+            return "vfat"
+        else:
+            print("Invalid choice. Please select a correct option.")
+
 
 def confirm_erasure(disk):
     while True:
@@ -35,10 +57,10 @@ def process_disk(disk, fs_choice, passes):
         partition_disk(disk)
         format_disk(disk, fs_choice)
         logging.info(f"Completed operations on disk: {disk}")
-    except (FileNotFoundError, subprocess.CalledProcessError):
+    except (FileNotFoundError, CalledProcessError):
         logging.info(f"Error processing disk {disk}.")
     
-def main(fs_choice=None, passes=7):
+def main(fs_choice : str,passes : int):
     disks = select_disks()
     if not disks:
         logging.info("No disks selected. Exiting.")
@@ -50,7 +72,7 @@ def main(fs_choice=None, passes=7):
         return
 
     if not fs_choice:
-        fs_choice = input("Choose filesystem (ntfs, ext4, vfat): ").strip().lower()
+        fs_choice = choose_filesystem()
 
     logging.info("All disks confirmed. Starting operations...\n")
 
@@ -71,7 +93,7 @@ def sudo_check(args):
 def _parse_args():
     parser = ArgumentParser(description="Secure Disk Eraser Tool")
     parser.add_argument('-f', choices=['ext4', 'ntfs', 'vfat'], required=False)
-    parser.add_argument('-p', type=int, default=6, required=False)
+    parser.add_argument('-p', type=int, default=5, required=False)
     return parser.parse_args()
 
 def app():

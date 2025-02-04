@@ -3,4 +3,4 @@
 
 void partition_disk(const char *disk);
 
-#endif // DISK_PARTITION_H
+#endif
