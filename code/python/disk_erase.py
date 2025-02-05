@@ -4,7 +4,7 @@ import sys
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def is_ssd(device):
+def is_ssd(device: str) -> bool:
     try:
         output = subprocess.run(
             ["cat", f"/sys/block/{device}/queue/rotational"],
@@ -21,8 +21,12 @@ def is_ssd(device):
         sys.exit(1)
     return False
 
-def erase_disk(device, passes):
+def erase_disk(device: str, passes: int) -> None:
     try:
+        # Type-casting arguments to ensure correct types
+        device = str(device)
+        passes = int(passes)
+
         if is_ssd(device):
             logging.info(f"Warning: {device} appears to be an SSD. Use `hdparm` for secure erase.")
             return
@@ -30,7 +34,7 @@ def erase_disk(device, passes):
         logging.info(f"Erasing {device} using shred with {passes} passes...")
 
         for i in range(1, passes + 1):
-            logging.info(f"Pass {i} of {passes} is being processed...")
+            logging.info(f"Pass {i} of {passes} is being processed on disk {device}...")
             subprocess.run(["shred", "-n", "1", "-z", f"/dev/{device}"], check=True)
 
         logging.info(f"Wiping partition table of {device} using dd...")

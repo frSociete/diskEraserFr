@@ -4,7 +4,7 @@ import sys
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def run_command(command_list):
+def run_command(command_list: list[str]) -> str:
     try:
         result = subprocess.run(command_list, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return result.stdout.decode('utf-8').strip()
@@ -15,7 +15,7 @@ def run_command(command_list):
         logging.error(f"Error: Command execution failed: {' '.join(command_list)}")
         sys.exit(1)
 
-def list_disks():
+def list_disks() -> None:
     logging.info("List of available disks:")
     try:
         output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE"])
@@ -29,3 +29,23 @@ def list_disks():
     except subprocess.CalledProcessError:
         logging.error("Error: Failed to retrieve disk information.")
         sys.exit(1)
+
+def choose_filesystem() -> str:
+    """
+    Prompt the user to choose a filesystem.
+    """
+    while True:
+        print("Choose a filesystem to format the disks:")
+        print("1. NTFS")
+        print("2. EXT4")
+        print("3. VFAT")
+        choice = input("Enter your choice (1, 2, or 3): ").strip()
+
+        if choice == "1":
+            return "ntfs"
+        elif choice == "2":
+            return "ext4"
+        elif choice == "3":
+            return "vfat"
+        else:
+            logging.error("Invalid choice. Please select a correct option.")
