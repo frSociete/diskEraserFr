@@ -2,7 +2,6 @@
 
 import os
 import sys
-import logging
 from subprocess import CalledProcessError
 from disk_erase import erase_disk
 from disk_partition import partition_disk
@@ -10,8 +9,7 @@ from disk_format import format_disk
 from utils import list_disks, choose_filesystem
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+from log_handler import log_info, log_error, get_uuid, log_uuid_change
 
 def select_disks() -> list[str]:
     list_disks()
@@ -23,48 +21,59 @@ def confirm_erasure(disk: str) -> bool:
         confirmation = input(f"Are you sure you want to securely erase {disk}? This cannot be undone. (y/n): ").strip().lower()
         if confirmation in {"y", "n"}:
             return confirmation == "y"
-        logging.info("Invalid input. Please enter 'y' or 'n'.")
+        log_info("Invalid input. Please enter 'y' or 'n'.")
 
 def get_disk_confirmations(disks: list[str]) -> list[str]:
     return [disk for disk in disks if confirm_erasure(disk)]
 
 def process_disk(disk: str, fs_choice: str, passes: int) -> None:
-    logging.info(f"Processing disk: {disk}")
-
+    log_info(f"Processing disk: {disk}")
+    
+    # Get the previous UUID before erasure
+    prev_uuid = get_uuid(disk)
+    
     try:
-        erase_disk(disk, passes) 
+        # Erase, partition, and format the disk
+        erase_disk(disk, passes)
         partition_disk(str(disk))
         format_disk(str(disk), str(fs_choice)) 
-        logging.info(f"Completed operations on disk: {disk}")
+        
+        # Get the new UUID after formatting
+        new_uuid = get_uuid(disk)
+        
+        # Log the UUID change
+        log_uuid_change(disk, prev_uuid, new_uuid)
+        
+        log_info(f"Completed operations on disk: {disk}")
     except (FileNotFoundError, CalledProcessError):
-        logging.info(f"Error processing disk {disk}.")
+        log_error(f"Error processing disk {disk}.")
 
 def main(fs_choice: str, passes: int) -> None:
     disks = select_disks()
     if not disks:
-        logging.info("No disks selected. Exiting.")
+        log_info("No disks selected. Exiting.")
         return
 
     confirmed_disks = get_disk_confirmations(disks)
     if not confirmed_disks:
-        logging.info("No disks confirmed for erasure. Exiting.")
+        log_info("No disks confirmed for erasure. Exiting.")
         return
 
     if not fs_choice:
         fs_choice = choose_filesystem()
 
-    logging.info("All disks confirmed. Starting operations...\n")
+    log_info("All disks confirmed. Starting operations...\n")
 
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(process_disk, disk, fs_choice, passes) for disk in confirmed_disks]
         for future in as_completed(futures):
             future.result()
 
-    logging.info("All operations completed successfully.")
+    log_info("All operations completed successfully.")
 
 def sudo_check(args) -> None:
     if os.geteuid() != 0:
-        logging.error("This script must be run as root!")
+        log_error("This script must be run as root!")
         sys.exit(1)
     else:
         main(args.f, args.p)

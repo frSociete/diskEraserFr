@@ -1,28 +1,55 @@
 import logging
-import subprocess
+import re
+from subprocess import check_output, CalledProcessError
 
-LOG_FILE = "/var/log/disk_erase.log"
+# Set up the logging configuration
+log_file = "disk_erase.log"
+log_handler = logging.FileHandler(log_file)
+log_handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(message)s')
+log_handler.setFormatter(formatter)
 
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(log_handler)
 
-def get_disk_uuid(disk: str) -> str:
-    """Retrieve the UUID of a disk if available."""
+import re
+from subprocess import check_output, CalledProcessError
+
+def get_uuid(disk: str) -> str:
+    """Return the UUID of the disk's first partition, e.g., /dev/vdd1."""
     try:
-        result = subprocess.run(
-            ["blkid", f"/dev/{disk}"], capture_output=True, text=True, check=True
-        )
-        for item in result.stdout.split():
-            if item.startswith("UUID="):
-                return item.split("=")[1].strip('"')
-    except subprocess.CalledProcessError:
-        return "UUID not found"
-    return "UUID not found"
+        # Define the partition (assuming the first partition for simplicity)
+        partition = f"/dev/{disk}1"
 
-def log_disk_erasure(disk: str) -> None:
-    """Log the disk UUID and successful erasure."""
-    uuid = get_disk_uuid(disk)
-    logging.info(f"Disk {disk} (UUID: {uuid}) has been successfully erased.")
+        # Run blkid with shell=False
+        output = check_output(["blkid", partition]).decode()
+
+        # Use regex to find the UUID in the output
+        uuid_match = re.search(r'UUID="([0-9a-fA-F-]+)"', output)
+        if uuid_match:
+            return uuid_match.group(1)
+        else:
+            return "Unknown"
+    
+    except CalledProcessError as e:
+        logger.error(f"Failed to execute blkid command for {disk}: {e}")
+    except Exception as e:
+        logger.error(f"Failed to retrieve UUID for {disk}: {e}")
+    
+    return "Unknown"
+
+
+def log_uuid_change(disk: str, prev_uuid: str, new_uuid: str) -> None:
+    """Log UUID change to the log file."""
+    logger.info(f"Previous UUID => New UUID: {prev_uuid} => {new_uuid}")
+    with open(log_file, "a") as log:
+        log.write(f"{disk}: {prev_uuid} => {new_uuid}\n")
+
+def log_info(message: str) -> None:
+    """Log general information to both the console and log file."""
+    logger.info(message)
+
+def log_error(message: str) -> None:
+    """Log error message to both the console and log file."""
+    logger.error(message)
