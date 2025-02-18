@@ -35,7 +35,7 @@ def erase_disk(device: str, passes: int) -> None:
 
         for i in range(1, passes + 1):
             logging.info(f"Pass {i} of {passes} is being processed on disk {device}...")
-            subprocess.run(["shred", "-n", "1", "-z", f"/dev/{device}"], check=True)
+            subprocess.run(["shred", "-n", "1", f"/dev/{device}"], check=True)
 
         logging.info(f"Wiping partition table of {device} using dd...")
         subprocess.run(["dd", "if=/dev/zero", f"of=/dev/{device}", "bs=1M", "count=10"], check=True)
