@@ -9,7 +9,7 @@ from disk_format import format_disk
 from utils import list_disks, choose_filesystem
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from log_handler import log_info, log_error, get_uuid, log_uuid_change
+from log_handler import log_info, log_error, get_uuid, log_uuid_change, log_erase_success
 
 def select_disks() -> list[str]:
     list_disks()
@@ -43,6 +43,8 @@ def process_disk(disk: str, fs_choice: str, passes: int) -> None:
         
         # Log the UUID change
         log_uuid_change(disk, prev_uuid, new_uuid)
+
+        log_erase_success(disk, new_uuid, fs_choice)
         
         log_info(f"Completed operations on disk: {disk}")
     except (FileNotFoundError, CalledProcessError):
