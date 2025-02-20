@@ -1,5 +1,7 @@
 # Disk Eraser - Secure Disk Wiping and Formatting Tool  
 
+# Disk Eraser
+
 **Disk Eraser** is a tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, ensuring thorough data wiping with multiple overwrite passes.  
 
 The tool operates with pre-selected confirmation and formatting options, requiring no further interaction from the user once the erasure process begins.  
@@ -23,6 +25,7 @@ The project is designed to run inside a Docker container, as a bootable ISO, dir
 - **Error Handling and Logging**: Logs errors, including permission issues and failed disk operations.  
 - **Automatic Disk Verification**: Confirms the integrity of the disk after the erasure process.  
 - **Root Privilege Check**: Ensures the tool runs with proper administrative permissions to prevent incomplete operations.  
+- **Log File Creation**: Automatically creates and maintains a log file at `/var/log/disk_erase.log` to store detailed information about the erasure process, errors, and system events.  
 
 ---
 
@@ -75,38 +78,6 @@ This allows you to execute the tool as a simple command from anywhere on your sy
 cd diskEraser/code/c
 ```
 
-2. **Compile the program**:
-
-```bash
-gcc -o disk_tool main.c disk_erase.c disk_partition.c disk_format.c utils.c -std=c11
-```
-
-This will generate the executable file named `disk_tool`.
-
-3. **Run the tool**:
-
-```bash
-sudo ./disk_tool
-```
-
-- The program will display the available disks and prompt you to select one for erasure.
-
-- It will also ask you to choose a file system for formatting (EXT4, NTFS, or VFAT).
-
-- The number of random data passes is fixed to 6 by default.
-
-4. **Move the compiled binary to a convenient location (optional)**:
-
-```bash
-sudo mv disk_tool /usr/local/bin/disk_tool
-```
-
-Now, you can execute the program from anywhere using:
-
-```bash
-sudo ./disk_tool
-```   
-
 ### Using with Docker
 
 You can also deploy a Docker container to use the disks eraser tool. If Docker is not install on your system, you can execute the **installDocker.sh** script on a Debian based system. 
@@ -145,9 +116,8 @@ cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
 If you prefer not to build the ISO yourself, you can download the pre-built ISO files for your system from the following links:
 
 - [Download the latest version of the ISO (version 2.1)](https://archive.org/details/diskeraser-v2.1)
-- [Download the previous version of the ISO (version 1)](https://archive.org/details/diskeraser)
 
-These ISO files are ready to be flashed to a USB key and used for bootable operations.
+These ISO file is ready to be flashed to a USB key and used for bootable operations.
 
 ---
 
