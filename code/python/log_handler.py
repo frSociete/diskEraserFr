@@ -1,19 +1,23 @@
 import logging
 import re
+import sys
 from subprocess import check_output, CalledProcessError
 
 # Define the log file path
 log_file = "/var/log/disk_erase.log"
 
-# Set up the logging configuration
-log_handler = logging.FileHandler(log_file)
-log_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(message)s')
-log_handler.setFormatter(formatter)
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-logger.addHandler(log_handler)
+
+try:
+    log_handler = logging.FileHandler(log_file)
+    log_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    log_handler.setFormatter(formatter)
+    logger.addHandler(log_handler)
+except PermissionError:
+    print("Error: Permission denied. Please run the script with sudo.", file=sys.stderr)
+    sys.exit(1)  # Exit the script to enforce sudo usage
 
 def get_uuid(disk: str) -> str:
     """Return the UUID of the disk's first partition, e.g., /dev/vdd1."""

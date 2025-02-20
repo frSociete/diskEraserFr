@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import time
 import sys
 from subprocess import CalledProcessError
 from disk_erase import erase_disk
@@ -36,6 +37,7 @@ def process_disk(disk: str, fs_choice: str, passes: int) -> None:
         # Erase, partition, and format the disk
         erase_disk(disk, passes)
         partition_disk(str(disk))
+        time.sleep(5)
         format_disk(str(disk), str(fs_choice)) 
         
         # Get the new UUID after formatting
@@ -75,7 +77,7 @@ def main(fs_choice: str, passes: int) -> None:
 
 def sudo_check(args) -> None:
     if os.geteuid() != 0:
-        log_error("This script must be run as root!")
+        log_error("This program must be run as root!")
         sys.exit(1)
     else:
         main(args.f, args.p)
