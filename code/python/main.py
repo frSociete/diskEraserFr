@@ -89,8 +89,12 @@ def _parse_args() -> ArgumentParser:
     return parser.parse_args()
 
 def app() -> None:
-    args = _parse_args()
-    sudo_check(args)
+    try:
+        args = _parse_args()
+        sudo_check(args)
+    except KeyboardInterrupt:
+        log_error("\nTerminating program")
+        sys.exit(1)
 
 if __name__ == "__main__":
     app()
