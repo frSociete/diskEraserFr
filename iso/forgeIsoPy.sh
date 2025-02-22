@@ -23,10 +23,10 @@ sudo lb clean
 
 # Configure live-build
 echo "Configuring live-build for Debian Bookworm..."
-lb config --distribution=bookworm --architectures amd64 \
-    --linux-packages linux-image \
-    --debian-installer live \
-    --bootappend-live "boot=live components hostname=secure-eraser username=user locales=fr_FR.UTF-8 keyboard-layouts=fr"
+lb config --distribution=bookworm --architectures=amd64 \
+    --linux-packages=linux-image \
+    --debian-installer=live \
+    --bootappend-live="boot=live components hostname=secure-eraser username=user locales=fr_FR.UTF-8 keyboard-layouts=fr"
 
 # Add Debian repositories for firmware
 mkdir -p config/archives
@@ -75,7 +75,6 @@ LC_ALL=fr_FR.UTF-8
 EOF
 
 # Set keyboard layout to AZERTY
-mkdir -p config/includes.chroot/etc/default/
 cat << EOF > config/includes.chroot/etc/default/keyboard
 XKBMODEL="pc105"
 XKBLAYOUT="fr"
@@ -84,7 +83,6 @@ XKBOPTIONS=""
 EOF
 
 # Set console keymap for tty
-mkdir -p config/includes.chroot/etc/default/
 cat << EOF > config/includes.chroot/etc/default/console-setup
 ACTIVE_CONSOLES="/dev/tty[1-6]"
 CHARMAP="UTF-8"
@@ -96,17 +94,19 @@ EOF
 # Copy all files from CODE_DIR to /usr/local/bin
 echo "Copying all files from $CODE_DIR to /usr/local/bin..."
 mkdir -p config/includes.chroot/usr/local/bin/
-
-# Copy all files recursively
 cp -r "$CODE_DIR"/* config/includes.chroot/usr/local/bin/
-
-# Make sure all copied files are executable
 chmod +x config/includes.chroot/usr/local/bin/*
 
 # Create symbolic link 'de' -> main.py
 ln -s /usr/local/bin/main.py config/includes.chroot/usr/local/bin/de
 
-# Configure .bashrc to run main.py on login and display message
+# Allow sudo without password
+echo "Configuring sudo to be passwordless..."
+mkdir -p config/includes.chroot/etc/sudoers.d/
+echo "user ALL=(ALL) NOPASSWD: ALL" > config/includes.chroot/etc/sudoers.d/passwordless
+chmod 0440 config/includes.chroot/etc/sudoers.d/passwordless
+
+# Configure .bashrc to run main.py on login
 echo "Configuring .bashrc to run main.py as root and show message..."
 mkdir -p config/includes.chroot/etc/skel/
 cat << 'EOF' > config/includes.chroot/etc/skel/.bashrc

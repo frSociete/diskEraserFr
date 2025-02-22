@@ -1,45 +1,48 @@
-# Disk Eraser - Secure Disk Wiping and Formatting Tool  
+# Disk Eraser - Secure Disk Wiping and Formatting Tool 🗑️💽
 
-**Disk Eraser** is a tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, ensuring thorough data wiping with multiple overwrite passes.  
+# Disk Eraser
 
-The tool operates with pre-selected confirmation and formatting options, requiring no further interaction from the user once the erasure process begins.  
+**Disk Eraser** 🔒 is a tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, ensuring thorough data wiping with multiple overwrite passes.
 
-The project is designed to run inside a Docker container, as a bootable ISO, directly as Python code, or as a Linux command stored in `/usr/local/bin` under the name `diskeraser`.  
+The tool operates with pre-selected confirmation and formatting options, requiring no further interaction from the user once the erasure process begins.
 
----
-
-## Features  
-
-- **List Available Disks**: Displays all detected disks for easy selection and allows the user to erase one or more disks.  
-- **Secure Erase**: Uses multiple passes of random data followed by a final zero pass to prevent data recovery.  
-- **Parallel Erasure**: Uses multi-threading to erase multiple disks simultaneously, optimizing performance.  
-- **Automatic Partitioning**: Configures the disk with a single partition after erasure.  
-- **Flexible Formatting**: Supports NTFS, EXT4, or VFAT file systems.  
-- **Non-Interactive Mode**: Erasure and formatting options are pre-selected, eliminating the need for user input during execution.  
-- **Docker Support**: Runs securely in a containerized environment.  
-- **Bootable ISO**: Can be converted into a bootable ISO for standalone operation.  
-- **Command Line Utility**: Can be installed as a Linux command (`diskeraser`) for ease of use.  
-- **Configurable Erase Passes**: Users can specify the number of overwrite passes (default is 6).  
-- **Error Handling and Logging**: Logs errors, including permission issues and failed disk operations.  
-- **Automatic Disk Verification**: Confirms the integrity of the disk after the erasure process.  
-- **Root Privilege Check**: Ensures the tool runs with proper administrative permissions to prevent incomplete operations.  
+The project is designed to run inside a Docker container 🐳, as a bootable ISO 💿, directly as Python code 🐍, or as a Linux command stored in `/usr/local/bin` under the name `diskeraser`.
 
 ---
 
-## Prerequisites  
+## Features ✨
 
-- **Root privileges** (required for disk access).  
-- **Docker** (if running inside a container).  
-- **GCC Compiler** (if compiling the C version).  
-- **Basic disk management knowledge**, as the tool **permanently erases data**.  
+- **List Available Disks** 📝: Displays all detected disks for easy selection and allows the user to erase one or more disks.
+- **Secure Erase** 🔐: Uses multiple passes of random data followed by a final zero pass to prevent data recovery.
+- **Parallel Erasure** ⚡: Uses multi-threading to erase multiple disks simultaneously, optimizing performance.
+- **Automatic Partitioning** 📊: Configures the disk with a single partition after erasure.
+- **Flexible Formatting** 📁: Supports NTFS, EXT4, or VFAT file systems.
+- **Non-Interactive Mode** 🤖: Erasure and formatting options are pre-selected, eliminating the need for user input during execution.
+- **Docker Support** 🐳: Runs securely in a containerized environment.
+- **Bootable ISO** 💿: Can be converted into a bootable ISO for standalone operation.
+- **Command Line Utility** 💻: Can be installed as a Linux command (`diskeraser`) for ease of use.
+- **Configurable Erase Passes** 🔄: Users can specify the number of overwrite passes (default is 6).
+- **Error Handling and Logging** 📋: Logs errors, including permission issues and failed disk operations.
+- **Automatic Disk Verification** ✅: Confirms the integrity of the disk after the erasure process.
+- **Root Privilege Check** 👑: Ensures the tool runs with proper administrative permissions to prevent incomplete operations.
+- **Log File Creation** 📝: Automatically creates and maintains a log file at `/var/log/disk_erase.log` to store detailed information about the erasure process, errors, and system events.
 
 ---
 
-## Installation and Usage  
+## Prerequisites 📋
 
-### Using Direct Python Code  
+- **Root privileges** 👑 (required for disk access).
+- **Docker** 🐳 (if running inside a container).
+- **GCC Compiler** 🔨 (if compiling the C version).
+- **Basic disk management knowledge** 📚, as the tool **permanently erases data** ⚠️.
 
-1. **Download the repository**:  
+---
+
+## Installation and Usage 🚀
+
+### Using Direct Python Code 🐍
+
+1. **Download the repository**:
 
 ```bash
 git clone https://github.com/Bolo101/diskEraser.git
@@ -51,7 +54,7 @@ cd diskEraser/code/python
 sudo python3 main.py
 ```
 
-### Install as a Linux Command (`diskeraser`)
+### Install as a Linux Command (`diskeraser`) 💻
 
 1. **Copy the scripts to `/usr/local/bin`**:
 ```bash
@@ -67,7 +70,7 @@ sudo diskeraser
 ```
 This allows you to execute the tool as a simple command from anywhere on your system.
 
-### Using C compiled code
+### Using C compiled code 🔨
 
 1. **Navigate to the C code directory**:
 
@@ -75,46 +78,14 @@ This allows you to execute the tool as a simple command from anywhere on your sy
 cd diskEraser/code/c
 ```
 
-2. **Compile the program**:
-
-```bash
-gcc -o disk_tool main.c disk_erase.c disk_partition.c disk_format.c utils.c -std=c11
-```
-
-This will generate the executable file named `disk_tool`.
-
-3. **Run the tool**:
-
-```bash
-sudo ./disk_tool
-```
-
-- The program will display the available disks and prompt you to select one for erasure.
-
-- It will also ask you to choose a file system for formatting (EXT4, NTFS, or VFAT).
-
-- The number of random data passes is fixed to 6 by default.
-
-4. **Move the compiled binary to a convenient location (optional)**:
-
-```bash
-sudo mv disk_tool /usr/local/bin/disk_tool
-```
-
-Now, you can execute the program from anywhere using:
-
-```bash
-sudo ./disk_tool
-```   
-
-### Using with Docker
+### Using with Docker 🐳
 
 You can also deploy a Docker container to use the disks eraser tool. If Docker is not install on your system, you can execute the **installDocker.sh** script on a Debian based system. 
 [Install Docker Script](https://github.com/Bolo101/Qemu.sh)
 
 For other distributions please access the Docker download page.
 
-#### Version 3.0 (New Version)
+#### Version 3.0 (New Version) 🆕
 
 1. **Pull the latest Docker image**:
 
@@ -134,7 +105,7 @@ docker run --rm -it --privileged zkbolo/diskeraser-v3.0:latest
 
 - You will also be prompted to choose a file system (EXT4, NTFS, or VFAT) after erasure.
 
-### Using the Bootable ISO
+### Using the Bootable ISO 💿
 
 1. **Create the ISO**: Use the provided Bash script in the project to generate a bootable ISO file:
 
@@ -145,13 +116,12 @@ cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
 If you prefer not to build the ISO yourself, you can download the pre-built ISO files for your system from the following links:
 
 - [Download the latest version of the ISO (version 2.1)](https://archive.org/details/diskeraser-v2.1)
-- [Download the previous version of the ISO (version 1)](https://archive.org/details/diskeraser)
 
-These ISO files are ready to be flashed to a USB key and used for bootable operations.
+These ISO file is ready to be flashed to a USB key and used for bootable operations.
 
 ---
 
-2. **Flash the ISO to a USB key**: Use a tool like `dd` or `Rufus`:
+2. **Flash the ISO to a USB key** 📀: Use a tool like `dd` or `Rufus`:
 
 With a terminal to forge USB using **dd** command
 ```bash
@@ -166,11 +136,11 @@ sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
 
 ---
 
-## Command Line Options
+## Command Line Options ⌨️
 
 When running the project directly in Python or via Docker, you can provide arguments to automate certain steps:
 
-**Select file system**:
+**Select file system** 💾:
 
 - `-f ext4`: Format the disk with the EXT4 file system.
 - `-f ntfs`: Format the disk with the NTFS file system.
@@ -186,49 +156,49 @@ This will erase the selected disk(s), then format it using the EXT4 file system.
 
 ---
 
-## Project Structure
+## Project Structure 📁
 
 Here is the main structure of the project:
 
 ```bash
 project/
-├── README.md                   # Documentation for the project
-├── code/                       # Main Python scripts for the tool
-│   ├── disk_erase.py           # Module for secure data erasure
-│   ├── disk_format.py          # Module for formatting disks
-│   ├── disk_partition.py       # Module for creating partitions
-│   ├── mainParse.py            # Main script with argument parsing
-│   └── utils.py                # Utility functions (e.g., disk listing)
-├── iso/                        # Files related to creating the bootable ISO
-│   └── forgeIso.sh             # Script to generate the bootable ISO
-├── setup.sh                    # Script to install dependencies and prepare the project
-├── LICENSE                     # Common Creative 4 license
-└── Dockerfile                  # Dockerfile to build docker image locally
+├── README.md                   # Documentation for the project 📚
+├── code/                       # Main Python scripts for the tool 🐍
+│   ├── disk_erase.py           # Module for secure data erasure 🗑️
+│   ├── disk_format.py          # Module for formatting disks 💾
+│   ├── disk_partition.py       # Module for creating partitions 📊
+│   ├── mainParse.py            # Main script with argument parsing ⚙️
+│   └── utils.py                # Utility functions (e.g., disk listing) 🔧
+├── iso/                        # Files related to creating the bootable ISO 💿
+│   └── forgeIso.sh             # Script to generate the bootable ISO 🔨
+├── setup.sh                    # Script to install dependencies and prepare the project 🛠️
+├── LICENSE                     # Common Creative 4 license ⚖️
+└── Dockerfile                  # Dockerfile to build docker image locally 🐳
 ```
 
 ---
 
-## Notes
+## Notes ⚠️
 
-- **Disk Safety**: The tool **permanently erases** data from the selected disks. Make sure you have backups of any important data before proceeding.
-- **Root Access**: Ensure you are running the program with sufficient privileges to access and modify disks (i.e., root or `sudo`).
-- **Non-Interactive Operation**: Once the erasure process begins, no further user interaction is required. All confirmation prompts and formatting options are selected beforehand.
-- **Small Disks**: If you are erasing very small disks, the tool may skip partitioning or formatting operations if the disk is too small to handle them.
+- **Disk Safety** 🛡️: The tool **permanently erases** data from the selected disks. Make sure you have backups of any important data before proceeding.
+- **Root Access** 👑: Ensure you are running the program with sufficient privileges to access and modify disks (i.e., root or `sudo`).
+- **Non-Interactive Operation** 🤖: Once the erasure process begins, no further user interaction is required. All confirmation prompts and formatting options are selected beforehand.
+- **Small Disks** 💾: If you are erasing very small disks, the tool may skip partitioning or formatting operations if the disk is too small to handle them.
 
-## License
+## License ⚖️
 
 This project is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ![Creative Commons License](https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png)
 
 You are free to:
-- Share: Copy and redistribute the material in any medium or format.
-- Adapt: Remix, transform, and build upon the material.
+- Share 🔄: Copy and redistribute the material in any medium or format.
+- Adapt 🔧: Remix, transform, and build upon the material.
 
 Under the following terms:
-- **Attribution**: You must give appropriate credit, provide a link to the license, and indicate if changes were made.
-- **NonCommercial**: You may not use the material for commercial purposes.
-- **ShareAlike**: If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+- **Attribution** ✍️: You must give appropriate credit, provide a link to the license, and indicate if changes were made.
+- **NonCommercial** 💰❌: You may not use the material for commercial purposes.
+- **ShareAlike** 🤝: If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
 
 For more details, see the [license terms](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
