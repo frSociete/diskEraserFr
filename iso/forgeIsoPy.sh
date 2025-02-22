@@ -6,7 +6,7 @@ set -e
 # Variables
 ISO_NAME="secure_disk_eraser.iso"
 WORK_DIR="$HOME/debian-live-build"
-CODE_DIR="$HOME/diskEraser/code/python"  # Path to your Python code directory
+CODE_DIR="$HOME/diskEraser/code"
 
 # Install necessary tools
 echo "Installing live-build and required dependencies..."
