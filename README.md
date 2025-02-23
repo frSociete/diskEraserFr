@@ -85,18 +85,18 @@ You can also deploy a Docker container to use the disks eraser tool. If Docker i
 
 For other distributions please access the Docker download page.
 
-#### Version 3.0 (New Version) 🆕
+#### Version 3.1 (New Version) 🆕
 
 1. **Pull the latest Docker image**:
 
 ```bash
-docker pull zkbolo/diskeraser-v3.0:latest
+docker pull zkbolo/diskeraser-v3.1:latest
 ```
 
 2. **Run the Docker Image with Necessary Privileges**:
 
 ```bash
-docker run --rm -it --privileged zkbolo/diskeraser-v3.0:latest
+docker run --rm -it --privileged zkbolo/diskeraser-v3.1:latest
 ```
 
 3. **Follow the interactive instructions inside the container to select and erase one or more disks**:
@@ -115,7 +115,7 @@ cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
 
 If you prefer not to build the ISO yourself, you can download the pre-built ISO files for your system from the following links:
 
-- [Download the latest version of the ISO (version 2.1)](https://archive.org/details/diskeraser-v2.1)
+- [Download the latest version of the ISO (version 3.1)](https://archive.org/details/diskEraserV3-1)
 
 These ISO file is ready to be flashed to a USB key and used for bootable operations.
 
@@ -162,18 +162,22 @@ Here is the main structure of the project:
 
 ```bash
 project/
-├── README.md                   # Documentation for the project 📚
-├── code/                       # Main Python scripts for the tool 🐍
-│   ├── disk_erase.py           # Module for secure data erasure 🗑️
-│   ├── disk_format.py          # Module for formatting disks 💾
-│   ├── disk_partition.py       # Module for creating partitions 📊
-│   ├── mainParse.py            # Main script with argument parsing ⚙️
-│   └── utils.py                # Utility functions (e.g., disk listing) 🔧
-├── iso/                        # Files related to creating the bootable ISO 💿
-│   └── forgeIso.sh             # Script to generate the bootable ISO 🔨
-├── setup.sh                    # Script to install dependencies and prepare the project 🛠️
-├── LICENSE                     # Common Creative 4 license ⚖️
-└── Dockerfile                  # Dockerfile to build docker image locally 🐳
+├── README.md               # Documentation for the project 📚
+├── code/                   # Main Python scripts for the tool 🐍
+│   ├── disk_erase.py       # Module for secure data erasure 🗑️
+│   ├── disk_format.py      # Module for formatting disks 💾
+│   ├── disk_partition.py   # Module for creating partitions 📊
+│   ├── log_handler.py      # Module for logging functionality 📝
+│   ├── main.py             # Main script with program logic ⚙️
+│   └── utils.py            # Utility functions (e.g., disk listing) 🔧
+├── iso/                    # Files related to creating the bootable ISO 💿
+│   ├── forgeIsoPy.sh       # Script to generate the bootable ISO 🔨
+│   └── makefile            # Build automation for ISO creation 🏗️
+├── setup.sh                # Script to install dependencies and prepare the project 🛠️
+├── LICENSE                 # Common Creative 4 license ⚖️
+└── Dockerfile              # Dockerfile to build docker image locally 🐳
+
+
 ```
 
 ---
