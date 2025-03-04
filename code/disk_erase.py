@@ -2,6 +2,7 @@ import subprocess
 import logging
 import sys
 import re
+import os
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -57,7 +58,7 @@ def is_ssd(device: str) -> bool:
         sys.exit(1)
     return False
 
-def erase_disk(device: str, passes: int) -> str:
+def erase_disk(device: str, passes: int, log_func=None) -> str:
     try:
         # Type-casting arguments to ensure correct types
         device = str(device)
@@ -71,7 +72,31 @@ def erase_disk(device: str, passes: int) -> str:
             return disk_serial
 
         logging.info(f"Erasing {device} using shred with {passes} passes...")
-        subprocess.run(["shred", "-n", f"{passes}", "-v", f"/dev/{device}"], check=True)
+        
+        # Create a subprocess with stdout piped to capture shred output
+        shred_process = subprocess.Popen(
+            ["shred", "-n", f"{passes}", "-v", f"/dev/{device}"], 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, 
+            universal_newlines=True
+        )
+
+        # Read output in real-time
+        while True:
+            output = shred_process.stdout.readline()
+            if output == '' and shred_process.poll() is not None:
+                break
+            if output:
+                # If a log function is provided (like in GUI), use it
+                # Otherwise, print to stdout
+                if log_func:
+                    log_func(output.strip())
+                else:
+                    print(output.strip())
+
+        # Check return code
+        if shred_process.returncode != 0:
+            raise subprocess.CalledProcessError(shred_process.returncode, "shred")
 
         logging.info(f"Wiping partition table of {device} using dd...")
         subprocess.run(["dd", "if=/dev/zero", f"of=/dev/{device}", "bs=1M", "count=10"], check=True)

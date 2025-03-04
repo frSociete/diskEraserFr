@@ -275,8 +275,12 @@ class DiskEraserGUI:
             self.status_var.set(f"Erasing {disk_serial}...")
             self.log(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
             
-            # Update to use a version of erase_disk that returns identifier
-            erase_result = erase_disk(disk.replace('/dev/', ''), passes)
+            # Pass a log function for real-time progress
+            erase_result = erase_disk(
+                disk.replace('/dev/', ''), 
+                passes, 
+                log_func=lambda msg: self.log(f"Shred progress: {msg}")
+            )
             
             self.log(f"Erase completed on disk ID: {disk_serial}")
             
@@ -308,16 +312,18 @@ class DiskEraserGUI:
         self.root.update_idletasks()
     
     def log(self, message):
-        # Add timestamp
+        """Display messages in GUI log window, but avoid logging progress updates to file."""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         log_message = f"[{timestamp}] {message}\n"
-        
-        # Update log in the UI
+
+        # Update log in the GUI
         self.log_text.insert(tk.END, log_message)
         self.log_text.see(tk.END)
-        
-        # Also log using the existing log_info function
-        log_info(message)
+
+        # Avoid logging shred progress in the log file
+        if "Shred progress" not in message:
+            log_info(message)
+
 
 def process_disk(disk: str, fs_choice: str, passes: int) -> None:
     log_info(f"Processing disk identifier: {get_disk_serial(disk)}")
