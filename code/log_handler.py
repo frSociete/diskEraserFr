@@ -1,7 +1,7 @@
 import logging
 import re
 import sys
-from subprocess import check_output, CalledProcessError
+from disk_erase import get_disk_serial
 
 # Define the log file path
 log_file = "/var/log/disk_erase.log"
@@ -19,27 +19,10 @@ except PermissionError:
     print("Error: Permission denied. Please run the script with sudo.", file=sys.stderr)
     sys.exit(1)  # Exit the script to enforce sudo usage
 
-def get_uuid(disk: str) -> str:
-    """Return the UUID of the disk's first partition, e.g., /dev/vdd1."""
-    try:
-        partition = f"/dev/{disk}1"
-        output = check_output(["blkid", partition]).decode()
-        uuid_match = re.search(r'UUID="([0-9a-fA-F-]+)"', output)
-        return uuid_match.group(1) if uuid_match else "Unknown"
-    except CalledProcessError as e:
-        logger.error(f"Failed to execute blkid command for {disk}: {e}")
-    except Exception as e:
-        logger.error(f"Failed to retrieve UUID for {disk}: {e}")
-    return "Unknown"
 
-def log_uuid_change(disk: str, prev_uuid: str, new_uuid: str) -> None:
-    """Log UUID change to the log file."""
-    message = f"UUID changed for {disk}: {prev_uuid} => {new_uuid}"
-    logger.info(message)
-
-def log_erase_success(disk: str, uuid: str, filesystem: str) -> None:
-    """Log successful erasure with UUID and filesystem format."""
-    message = f"Erasure successful for {disk}. UUID: {uuid}, Filesystem: {filesystem}"
+def log_erase_operation(disk_id: str, filesystem: str) -> None:
+    """Log detailed erasure operation with stable disk identifier."""
+    message = f"Erasure operation for disk ID: {disk_id}. Filesystem: {filesystem}"
     logger.info(message)
 
 def log_info(message: str) -> None:
