@@ -368,8 +368,6 @@ def select_disks() -> list[str]:
             log_info("No disks detected.")
             return []
             
-        print("Available disks:")
-        print(disk_list)
     except Exception:
         pass
         

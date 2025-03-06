@@ -67,6 +67,9 @@ def erase_disk(device: str, passes: int, log_func=None) -> str:
             # Continue with erasure instead of returning
 
         logging.info(f"Erasing {device} using shred with {passes} passes...")
+        # Also log to GUI if log_func is provided
+        if log_func:
+            log_func(f"Erasing {device} using shred with {passes} passes...")
         
         # Create a subprocess with stdout piped to capture shred output
         shred_process = subprocess.Popen(
@@ -93,14 +96,31 @@ def erase_disk(device: str, passes: int, log_func=None) -> str:
         if shred_process.returncode != 0:
             raise subprocess.CalledProcessError(shred_process.returncode, "shred")
 
-        logging.info(f"Wiping partition table of {device} using dd...")
+        # Log partition table wiping to both log file and GUI
+        wipe_message = f"Wiping partition table of {device} using dd..."
+        logging.info(wipe_message)
+        if log_func:
+            log_func(wipe_message)
+            
+        # Run dd command
         subprocess.run(["dd", "if=/dev/zero", f"of=/dev/{device}", "bs=1M", "count=10"], check=True)
 
-        logging.info(f"Disk {device} successfully erased.")
+        # Log success message to both log file and GUI
+        success_message = f"Disk {device} successfully erased."
+        logging.info(success_message)
+        if log_func:
+            log_func(success_message)
+            
         return disk_serial
     except FileNotFoundError:
-        logging.error(f"Error: Required command not found.")
+        error_message = "Error: Required command not found."
+        logging.error(error_message)
+        if log_func:
+            log_func(error_message)
         sys.exit(2)
     except subprocess.CalledProcessError as e:
-        logging.error(f"Error: Failed to erase {device}: {e}")
+        error_message = f"Error: Failed to erase {device}: {e}"
+        logging.error(error_message)
+        if log_func:
+            log_func(error_message)
         sys.exit(1)
