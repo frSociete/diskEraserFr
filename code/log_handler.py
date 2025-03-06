@@ -1,7 +1,5 @@
 import logging
-import re
 import sys
-from disk_erase import get_disk_serial
 
 # Define the log file path
 log_file = "/var/log/disk_erase.log"

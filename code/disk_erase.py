@@ -2,43 +2,41 @@ import subprocess
 import logging
 import sys
 import re
-import os
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def get_disk_serial(device: str) -> str:
     """
-    Get a stable disk identifier using hdparm or lsblk
-    This provides a more consistent identifier across operations
+    Get a stable disk identifier using udevadm to extract WWN or serial number from an unmounted device.
     """
     try:
-        # Try hdparm first for serial number
+        # Try getting the WWN (World Wide Name) directly from udevadm
         output = subprocess.run(
-            ["hdparm", "-I", f"/dev/{device}"], 
-            check=True, 
-            stdout=subprocess.PIPE, 
+            ["udevadm", "info", "--query=property", f"--name=/dev/{device}"],
+            check=True,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         ).stdout.decode()
-        serial_match = re.search(r'Serial Number:\s*(\S+)', output)
+
+        # Look for WWN in the udevadm output
+        wwn_match = re.search(r'ID_WWN=(\S+)', output)
+        if wwn_match:
+            return wwn_match.group(1)
+
+        # If WWN not found, fall back to the serial number
+        serial_match = re.search(r'ID_SERIAL_SHORT=(\S+)', output)
         if serial_match:
             return serial_match.group(1)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
+        
+        # Get the model as a fallback if serial is not available
+        model_match = re.search(r'ID_MODEL=(\S+)', output)
+        if model_match:
+            return f"{model_match.group(1)}_{device}"
+            
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        logging.error(f"Error occurred while querying {device}: {e}")
 
-    try:
-        # Fallback to using device model from lsblk
-        output = subprocess.run(
-            ["lsblk", "-d", "-o", "MODEL", f"/dev/{device}"], 
-            check=True, 
-            stdout=subprocess.PIPE
-        ).stdout.decode()
-        lines = output.strip().split('\n')
-        if len(lines) > 1:
-            return lines[1].strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
-
-    # Final fallback
+    # If all else fails, return a default identifier
     return f"UNKNOWN_{device}"
 
 def is_ssd(device: str) -> bool:
@@ -50,13 +48,10 @@ def is_ssd(device: str) -> bool:
             stderr=subprocess.PIPE,
         )
         return output.stdout.decode().strip() == "0"
-    except FileNotFoundError:
-        logging.error(f"SSD check failed: {device} not found.")
-        sys.exit(2)
-    except subprocess.SubprocessError:
-        logging.error(f"Error executing subprocess for SSD check on {device}.")
-        sys.exit(1)
-    return False
+    except (FileNotFoundError, subprocess.SubprocessError) as e:
+        logging.warning(f"SSD check failed for {device}: {e}")
+        # Don't exit, just return False as fallback
+        return False
 
 def erase_disk(device: str, passes: int, log_func=None) -> str:
     try:
@@ -68,8 +63,8 @@ def erase_disk(device: str, passes: int, log_func=None) -> str:
         disk_serial = get_disk_serial(device)
 
         if is_ssd(device):
-            logging.info(f"Warning: {device} appears to be an SSD. Use `hdparm` for secure erase.")
-            return disk_serial
+            logging.warning(f"Warning: {device} appears to be an SSD. Multiple passes may not be effective.")
+            # Continue with erasure instead of returning
 
         logging.info(f"Erasing {device} using shred with {passes} passes...")
         
@@ -106,6 +101,6 @@ def erase_disk(device: str, passes: int, log_func=None) -> str:
     except FileNotFoundError:
         logging.error(f"Error: Required command not found.")
         sys.exit(2)
-    except subprocess.CalledProcessError:
-        logging.error(f"Error: Failed to erase {device} using shred or dd.")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error: Failed to erase {device}: {e}")
         sys.exit(1)

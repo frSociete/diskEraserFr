@@ -15,14 +15,16 @@ def run_command(command_list: list[str]) -> str:
         logging.error(f"Error: Command execution failed: {' '.join(command_list)}")
         sys.exit(1)
 
-def list_disks() -> None:
+def list_disks() -> str:
     logging.info("List of available disks:")
     try:
         output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE"])
         if output:
             logging.info(output)
+            return output
         else:
             logging.info("No disks detected. Ensure the program is run with appropriate permissions.")
+            return ""
     except FileNotFoundError:
         logging.error("Error: `lsblk` command not found. Install `util-linux` package.")
         sys.exit(2)

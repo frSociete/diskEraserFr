@@ -6,7 +6,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 from subprocess import CalledProcessError
-from disk_erase import erase_disk, get_disk_serial
+from disk_erase import erase_disk, get_disk_serial, is_ssd
 from disk_partition import partition_disk
 from disk_format import format_disk
 from utils import list_disks, choose_filesystem, run_command
@@ -14,8 +14,7 @@ from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from log_handler import log_info, log_error, log_erase_operation
 import threading
-import io
-from contextlib import redirect_stdout
+import logging
 
 class DiskEraserGUI:
     def __init__(self, root):
@@ -26,6 +25,7 @@ class DiskEraserGUI:
         self.filesystem_var = tk.StringVar(value="ext4")
         self.passes_var = tk.StringVar(value="5")
         self.disks = []
+        self.disk_progress = {}
         
         # Check for root privileges
         if os.geteuid() != 0:
@@ -98,7 +98,7 @@ class DiskEraserGUI:
         
         # Progress frame
         progress_frame = ttk.LabelFrame(main_frame, text="Progress")
-        progress_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5,pady=5)
+        progress_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
         
         self.progress_var = tk.DoubleVar()
         self.progress = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
@@ -146,10 +146,14 @@ class DiskEraserGUI:
             cb.pack(side=tk.LEFT)
             
             # Disk identifier label with size info
-            disk_identifier = get_disk_serial(disk['device'].replace('/dev/', ''))
+            device_name = disk['device'].replace('/dev/', '')
+            disk_identifier = get_disk_serial(device_name)
+            is_device_ssd = is_ssd(device_name)
+            ssd_indicator = " (SSD)" if is_device_ssd else ""
+            
             disk_label = ttk.Label(
                 frame, 
-                text=f"{disk_identifier} ({disk['size']}) - {disk['model']}"
+                text=f"{disk_identifier}{ssd_indicator} ({disk['size']}) - {disk['model']}"
             )
             disk_label.pack(side=tk.LEFT, padx=5)
     
@@ -170,12 +174,22 @@ class DiskEraserGUI:
                 data_lines = lines[1:]
                 
                 for line in data_lines:
-                    parts = line.strip().split(maxsplit=3)  # Ensure we correctly handle spaces in the model
+                    parts = line.strip().split(None, 3)  # Better splitting that handles whitespace
                     if len(parts) < 3:
                         continue
                     
-                    device, size, type_ = parts[:3]
-                    model = parts[3] if len(parts) == 4 else "Unknown"
+                    device = parts[0]
+                    size = parts[1]
+                    
+                    # Handle case where MODEL might be missing
+                    if len(parts) >= 4 and parts[2] == "disk":
+                        model = parts[3]
+                        type_ = parts[2]
+                    elif len(parts) == 3:
+                        model = "Unknown"
+                        type_ = parts[2]
+                    else:
+                        continue
 
                     # Only consider actual disks
                     if type_ != "disk":
@@ -200,7 +214,10 @@ class DiskEraserGUI:
             return
         
         # Get disk identifiers
-        disk_identifiers = [get_disk_serial(disk.replace('/dev/', '')) for disk in selected_disks]
+        disk_identifiers = []
+        for disk in selected_disks:
+            disk_name = disk.replace('/dev/', '')
+            disk_identifiers.append(get_disk_serial(disk_name))
         
         # Confirm erasure
         disk_list = "\n".join(disk_identifiers)
@@ -263,21 +280,22 @@ class DiskEraserGUI:
     
     def process_single_disk(self, disk, fs_choice, passes):
         # Get the stable disk identifier before erasure
+        disk_name = disk.replace('/dev/', '')
         try:
-            disk_serial = get_disk_serial(disk.replace('/dev/', ''))
+            # Get disk serial/identifier
+            disk_serial = get_disk_serial(disk_name)
             self.log(f"Processing disk identifier: {disk_serial}")
         except Exception as e:
             self.log(f"Could not get disk identifier: {str(e)}")
-            disk_serial = "unknown"
+            disk_serial = f"unknown_{disk_name}"
         
         try:
-            # Erase the disk with progress updates
             self.status_var.set(f"Erasing {disk_serial}...")
             self.log(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
             
             # Pass a log function for real-time progress
             erase_result = erase_disk(
-                disk.replace('/dev/', ''), 
+                disk_name, 
                 passes, 
                 log_func=lambda msg: self.log(f"Shred progress: {msg}")
             )
@@ -287,7 +305,7 @@ class DiskEraserGUI:
             # Partition the disk
             self.status_var.set(f"Partitioning {disk_serial}...")
             self.log(f"Creating partition on disk ID: {disk_serial}")
-            partition_disk(disk.replace('/dev/', ''))
+            partition_disk(disk_name)
             
             # Wait for the OS to recognize the new partition
             self.log("Waiting for partition to be recognized...")
@@ -296,7 +314,7 @@ class DiskEraserGUI:
             # Format the disk
             self.status_var.set(f"Formatting {disk_serial}...")
             self.log(f"Formatting disk ID: {disk_serial} with {fs_choice}")
-            format_disk(disk.replace('/dev/', ''), fs_choice)
+            format_disk(disk_name, fs_choice)
             
             # Log the erase operation with the stable disk identifier and filesystem
             log_erase_operation(disk_serial, fs_choice)
@@ -326,22 +344,35 @@ class DiskEraserGUI:
 
 
 def process_disk(disk: str, fs_choice: str, passes: int) -> None:
-    log_info(f"Processing disk identifier: {get_disk_serial(disk)}")
-    
     try:
+        disk_id = get_disk_serial(disk)
+        log_info(f"Processing disk identifier: {disk_id}")
+        
         # Erase, partition, and format the disk
-        disk_id = erase_disk(disk, passes)
-        partition_disk(str(disk))
-        time.sleep(5)
-        format_disk(str(disk), str(fs_choice)) 
+        erase_disk(disk, passes)
+        partition_disk(disk)
+        time.sleep(5)  # Wait for the system to recognize the new partition
+        format_disk(disk, fs_choice) 
         
         log_erase_operation(disk_id, fs_choice)
         
         log_info(f"Completed operations on disk ID: {disk_id}")
-    except (FileNotFoundError, CalledProcessError):
-        log_error(f"Error processing disk: {get_disk_serial(disk)}")
+    except Exception as e:
+        log_error(f"Error processing disk {disk}: {str(e)}")
+        raise
 
 def select_disks() -> list[str]:
+    try:
+        disk_list = list_disks()
+        if not disk_list:
+            log_info("No disks detected.")
+            return []
+            
+        print("Available disks:")
+        print(disk_list)
+    except Exception:
+        pass
+        
     selected_disks = input("Enter the disks to erase (comma-separated, e.g., sda,sdb): ").strip()
     return [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
 
@@ -360,8 +391,8 @@ def get_disk_confirmations(disks: list[str]) -> list[str]:
 def run_cli_mode(args):
     """Run the original command-line interface version"""
     try:
-        fs_choice = args.f
-        passes = args.p
+        fs_choice = args.filesystem
+        passes = args.passes
         
         disks = select_disks()
         if not disks:
@@ -381,7 +412,10 @@ def run_cli_mode(args):
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(process_disk, disk, fs_choice, passes) for disk in confirmed_disks]
             for future in as_completed(futures):
-                future.result()
+                try:
+                    future.result()
+                except Exception as e:
+                    log_error(f"Error processing disk: {str(e)}")
 
         log_info("All operations completed successfully.")
         
@@ -399,8 +433,8 @@ def main():
     # Parse command-line arguments
     parser = ArgumentParser(description="Secure Disk Eraser Tool")
     parser.add_argument('--cli', action='store_true', help="Run in command-line mode instead of GUI")
-    parser.add_argument('-f', choices=['ext4', 'ntfs', 'vfat'], required=False, type=str, help="Filesystem type to use")
-    parser.add_argument('-p', type=int, default=5, required=False, help="Number of passes for erasure")
+    parser.add_argument('-f', '--filesystem', choices=['ext4', 'ntfs', 'vfat'], help="Filesystem type to use")
+    parser.add_argument('-p', '--passes', type=int, default=5, help="Number of passes for erasure")
     args = parser.parse_args()
     
     # Check for root privileges
