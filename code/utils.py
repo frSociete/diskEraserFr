@@ -18,13 +18,20 @@ def run_command(command_list: list[str]) -> str:
 def list_disks() -> str:
     logging.info("List of available disks:")
     try:
-        output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE"])
+        # Use more explicit column specification with -o option and -n to skip header
+        output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE,MODEL", "-n"])
         if output:
             logging.info(output)
             return output
         else:
-            logging.info("No disks detected. Ensure the program is run with appropriate permissions.")
-            return ""
+            # Fallback to a simpler command if the first one returned no results
+            output = run_command(["lsblk", "-d", "-o", "NAME", "-n"])
+            if output:
+                logging.info(output)
+                return output
+            else:
+                logging.info("No disks detected. Ensure the program is run with appropriate permissions.")
+                return ""
     except FileNotFoundError:
         logging.error("Error: `lsblk` command not found. Install `util-linux` package.")
         sys.exit(2)

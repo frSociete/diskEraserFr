@@ -159,47 +159,59 @@ class DiskEraserGUI:
     
     def _get_disks(self):
         """
-        Get list of available disks using the list_disks utility function
-        and parse the output to create structured disk information.
+        Get list of available disks using lsblk with more robust parsing.
         """
         try:
-            output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,MODEL,TYPE"])
+            # Use more explicit column specification with -o option
+            output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE,MODEL", "-n"])
             
             # Parse the output from lsblk command
             disks = []
-            lines = output.strip().split('\n')
-            
-            # Skip the header line if present
-            if len(lines) > 1:
-                data_lines = lines[1:]
+            for line in output.strip().split('\n'):
+                if not line.strip():
+                    continue
+                    
+                # Split the line but preserve the model name which might contain spaces
+                parts = line.strip().split(maxsplit=3)
+                device = parts[0]
                 
-                for line in data_lines:
-                    parts = line.strip().split(None, 3)  # Better splitting that handles whitespace
-                    if len(parts) < 3:
-                        continue
-                    
-                    device = parts[0]
+                # Ensure we have at least NAME, SIZE, and TYPE
+                if len(parts) >= 3:
                     size = parts[1]
+                    type_ = parts[2]
                     
-                    # Handle case where MODEL might be missing
-                    if len(parts) >= 4 and parts[2] == "disk":
-                        model = parts[3]
-                        type_ = parts[2]
-                    elif len(parts) == 3:
-                        model = "Unknown"
-                        type_ = parts[2]
-                    else:
-                        continue
-
+                    # MODEL may be missing, set to "Unknown" if it is
+                    model = parts[3] if len(parts) > 3 else "Unknown"
+                    
                     # Only consider actual disks
-                    if type_ != "disk":
-                        continue
-
-                    disks.append({
-                        "device": f"/dev/{device}",
-                        "size": size,
-                        "model": model
-                    })
+                    if type_ == "disk":
+                        disks.append({
+                            "device": f"/dev/{device}",
+                            "size": size,
+                            "model": model
+                        })
+            
+            # If no disks found, try an alternative approach
+            if not disks:
+                self.log("No disks found with primary method, trying alternative approach...")
+                # Use simple lsblk command to get just the device names
+                output = run_command(["lsblk", "-d", "-o", "NAME", "-n"])
+                for line in output.strip().split('\n'):
+                    if line.strip():
+                        device = line.strip()
+                        # Get size using a separate command
+                        try:
+                            size_output = run_command(["lsblk", "-d", "-o", "SIZE", "-n", f"/dev/{device}"])
+                            size = size_output.strip() if size_output.strip() else "Unknown"
+                        except:
+                            size = "Unknown"
+                        
+                        disks.append({
+                            "device": f"/dev/{device}",
+                            "size": size,
+                            "model": "Unknown"
+                        })
+            
             return disks
         except Exception as e:
             self.log(f"Error getting disk list: {str(e)}")
