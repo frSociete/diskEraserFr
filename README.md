@@ -70,14 +70,6 @@ sudo diskeraser
 ```
 This allows you to execute the tool as a simple command from anywhere on your system.
 
-### Using C compiled code 🔨
-
-1. **Navigate to the C code directory**:
-
-```bash
-cd diskEraser/code/c
-```
-
 ### Using with Docker 🐳
 
 You can also deploy a Docker container to use the disks eraser tool. If Docker is not install on your system, you can execute the **installDocker.sh** script on a Debian based system. 
