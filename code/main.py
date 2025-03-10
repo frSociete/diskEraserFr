@@ -110,7 +110,7 @@ class DiskEraserGUI:
         start_button.pack(pady=20, padx=10, fill=tk.X)
 
         # Exit program button
-        close_button = ttk.Button(options_frame, text="Exit", command=self.root.destroy)
+        close_button = ttk.Button(options_frame, text="Exit", command=self.exit_application)
         close_button.pack(pady=5, padx=10, fill=tk.X)
         
         # Progress frame
@@ -135,6 +135,17 @@ class DiskEraserGUI:
         
         self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Protocol for window close event
+        self.root.protocol("WM_DELETE_WINDOW", self.exit_application)
+    
+    def exit_application(self):
+        """Log and close the application when Exit is clicked"""
+        exit_message = "Application closed by user via Exit button"
+        log_info(exit_message)
+        self.update_gui_log(exit_message)
+        blank()  # Add separator in log file
+        self.root.destroy()
     
     def toggle_fullscreen(self):
         """Toggle fullscreen mode"""
