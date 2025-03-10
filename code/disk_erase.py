@@ -35,6 +35,10 @@ def get_disk_serial(device: str) -> str:
             
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         logging.error(f"Error occurred while querying {device}: {e}")
+    except KeyboardInterrupt:
+        logging.error("Disk identification interrupted by user (Ctrl+C)")
+        print("\nDisk identification interrupted by user (Ctrl+C)")
+        sys.exit(130)
 
     # If all else fails, return a default identifier
     return f"UNKNOWN_{device}"
@@ -52,6 +56,10 @@ def is_ssd(device: str) -> bool:
         logging.warning(f"SSD check failed for {device}: {e}")
         # Don't exit, just return False as fallback
         return False
+    except KeyboardInterrupt:
+        logging.error("SSD check interrupted by user (Ctrl+C)")
+        print("\nSSD check interrupted by user (Ctrl+C)")
+        sys.exit(130)
 
 def erase_disk(device: str, passes: int, log_func=None) -> str:
     try:
@@ -81,16 +89,23 @@ def erase_disk(device: str, passes: int, log_func=None) -> str:
 
         # Read output in real-time
         while True:
-            output = shred_process.stdout.readline()
-            if output == '' and shred_process.poll() is not None:
-                break
-            if output:
-                # If a log function is provided (like in GUI), use it
-                # Otherwise, print to stdout
-                if log_func:
-                    log_func(output.strip())
-                else:
-                    print(output.strip())
+            try:
+                output = shred_process.stdout.readline()
+                if output == '' and shred_process.poll() is not None:
+                    break
+                if output:
+                    # If a log function is provided (like in GUI), use it
+                    # Otherwise, print to stdout
+                    if log_func:
+                        log_func(output.strip())
+                    else:
+                        print(output.strip())
+            except KeyboardInterrupt:
+                # Terminate the shred process if user interrupts
+                shred_process.terminate()
+                logging.error("Disk erasure interrupted by user (Ctrl+C)")
+                print("\nDisk erasure interrupted by user (Ctrl+C)")
+                sys.exit(130)
 
         # Check return code
         if shred_process.returncode != 0:
@@ -124,3 +139,10 @@ def erase_disk(device: str, passes: int, log_func=None) -> str:
         if log_func:
             log_func(error_message)
         sys.exit(1)
+    except KeyboardInterrupt:
+        error_message = "Disk erasure interrupted by user (Ctrl+C)"
+        logging.error(error_message)
+        if log_func:
+            log_func(error_message)
+        print(f"\n{error_message}")
+        sys.exit(130)

@@ -155,7 +155,8 @@ class DiskEraserGUI:
                     return match.group(1)
             return None
         except Exception as e:
-            self.log(f"Error determining active disk: {str(e)}")
+            self.update_gui_log(f"Error determining active disk: {str(e)}")
+            log_error(f"Error determining active disk: {str(e)}")
             return None
         
     def refresh_disks(self):
@@ -245,7 +246,8 @@ class DiskEraserGUI:
             
             # If no disks found, try an alternative approach
             if not disks:
-                self.log("No disks found with primary method, trying alternative approach...")
+                self.update_gui_log("No disks found with primary method, trying alternative approach...")
+                log_info("No disks found with primary method, trying alternative approach...")
                 # Use simple lsblk command to get just the device names
                 output = run_command(["lsblk", "-d", "-o", "NAME", "-n"])
                 for line in output.strip().split('\n'):
@@ -266,7 +268,9 @@ class DiskEraserGUI:
             
             return disks
         except Exception as e:
-            self.log(f"Error getting disk list: {str(e)}")
+            error_msg = f"Error getting disk list: {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
             return []
 
     def start_erasure(self):
@@ -332,8 +336,10 @@ class DiskEraserGUI:
         threading.Thread(target=self.process_disks, args=(selected_disks, fs_choice, passes), daemon=True).start()
     
     def process_disks(self, disks, fs_choice, passes):
-        self.log(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
-        self.log(f"Selected filesystem: {fs_choice}")
+        self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
+        log_info(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
+        self.update_gui_log(f"Selected filesystem: {fs_choice}")
+        log_info(f"Selected filesystem: {fs_choice}")
         
         total_disks = len(disks)
         completed_disks = 0
@@ -354,7 +360,9 @@ class DiskEraserGUI:
                     self.update_progress((completed_disks / total_disks) * 100)
                     self.status_var.set(f"Completed {completed_disks}/{total_disks} disks")
                 except Exception as e:
-                    self.log(f"Error processing disk: {str(e)}")
+                    error_msg = f"Error processing disk: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
         
         self.status_var.set("Erasure process completed")
         messagebox.showinfo("Complete", "Disk erasure operation has completed!")
@@ -365,63 +373,70 @@ class DiskEraserGUI:
         try:
             # Get disk serial/identifier
             disk_serial = get_disk_serial(disk_name)
-            self.log(f"Processing disk identifier: {disk_serial}")
+            self.update_gui_log(f"Processing disk identifier: {disk_serial}")
+            log_info(f"Processing disk identifier: {disk_serial}")
         except Exception as e:
-            self.log(f"Could not get disk identifier: {str(e)}")
+            error_msg = f"Could not get disk identifier: {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
             disk_serial = f"unknown_{disk_name}"
         
         try:
             self.status_var.set(f"Erasing {disk_serial}...")
-            self.log(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
+            self.update_gui_log(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
+            log_info(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
             
             # Pass a log function for real-time progress
             erase_result = erase_disk(
                 disk_name, 
                 passes, 
-                log_func=lambda msg: self.log(f"Shred progress: {msg}")
+                log_func=lambda msg: self.update_gui_log(f"Shred progress: {msg}")
             )
             
-            self.log(f"Erase completed on disk ID: {disk_serial}")
+            self.update_gui_log(f"Erase completed on disk ID: {disk_serial}")
+            log_info(f"Erase completed on disk ID: {disk_serial}")
             
             # Partition the disk
             self.status_var.set(f"Partitioning {disk_serial}...")
-            self.log(f"Creating partition on disk ID: {disk_serial}")
+            self.update_gui_log(f"Creating partition on disk ID: {disk_serial}")
+            log_info(f"Creating partition on disk ID: {disk_serial}")
             partition_disk(disk_name)
             
             # Wait for the OS to recognize the new partition
-            self.log("Waiting for partition to be recognized...")
+            self.update_gui_log("Waiting for partition to be recognized...")
+            log_info("Waiting for partition to be recognized...")
             time.sleep(5)
             
             # Format the disk
             self.status_var.set(f"Formatting {disk_serial}...")
-            self.log(f"Formatting disk ID: {disk_serial} with {fs_choice}")
+            self.update_gui_log(f"Formatting disk ID: {disk_serial} with {fs_choice}")
+            log_info(f"Formatting disk ID: {disk_serial} with {fs_choice}")
             format_disk(disk_name, fs_choice)
             
             # Log the erase operation with the stable disk identifier and filesystem
             log_erase_operation(disk_serial, fs_choice)
             
-            self.log(f"Completed operations on disk ID: {disk_serial}")
+            self.update_gui_log(f"Completed operations on disk ID: {disk_serial}")
+            log_info(f"Completed operations on disk ID: {disk_serial}")
             
-        except Exception as e:
-            self.log(f"Error processing disk ID: {disk_serial}: {str(e)}")
+        except CalledProcessError as e:
+            error_msg = f"Error processing disk ID: {disk_serial}: {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
             raise
     
     def update_progress(self, value):
         self.progress_var.set(value)
         self.root.update_idletasks()
     
-    def log(self, message):
-        """Display messages in GUI log window, but avoid logging progress updates to file."""
+    def update_gui_log(self, message):
+        """Update only the GUI log window with a message."""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         log_message = f"[{timestamp}] {message}\n"
 
         # Update log in the GUI
         self.log_text.insert(tk.END, log_message)
         self.log_text.see(tk.END)
-
-        # Avoid logging shred progress in the log file
-        if "Shred progress" not in message:
-            log_info(message)
 
 
 def process_disk(disk: str, fs_choice: str, passes: int) -> None:
@@ -454,40 +469,53 @@ def select_disks() -> list[str]:
         print("Available disks:")
         for line in disk_list.strip().split('\n'):
             print(line)
-            
-    except Exception as e:
-        log_error(f"Error listing disks: {str(e)}")
         
-    selected_disks = input("Enter the disks to erase (comma-separated, e.g., sda,sdb): ").strip()
-    disk_names = [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
-    
-    # Validate disk names
-    valid_disks = []
-    for disk in disk_names:
-        # Check if disk name follows proper format (letters followed by optional numbers)
-        if re.match(r'^[a-zA-Z]+[0-9]*$', disk):
-            # Verify disk exists
-            disk_path = f"/dev/{disk}"
-            if os.path.exists(disk_path):
-                valid_disks.append(disk)
+        selected_disks = input("Enter the disks to erase (comma-separated, e.g., sda,sdb): ").strip()
+        disk_names = [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
+        
+        # Validate disk names
+        valid_disks = []
+        for disk in disk_names:
+            # Check if disk name follows proper format (letters followed by optional numbers)
+            if re.match(r'^[a-zA-Z]+[0-9]*$', disk):
+                # Verify disk exists
+                disk_path = f"/dev/{disk}"
+                if os.path.exists(disk_path):
+                    valid_disks.append(disk)
+                else:
+                    print(f"Disk {disk_path} not found. Skipping.")
             else:
-                print(f"Disk {disk_path} not found. Skipping.")
-        else:
-            print(f"Invalid disk name format: {disk}. Disk names should be like 'sda', 'sdb', etc. Skipping.")
-    
-    return valid_disks
+                print(f"Invalid disk name format: {disk}. Disk names should be like 'sda', 'sdb', etc. Skipping.")
+        
+        return valid_disks
+        
+    except KeyboardInterrupt:
+        log_error("Disk selection interrupted by user (Ctrl+C)")
+        print("\nDisk selection interrupted by user (Ctrl+C)")
+        sys.exit(130)
 
 def confirm_erasure(disk: str) -> bool:
     while True:
-        # Use disk identifier instead of device path
-        disk_id = get_disk_serial(disk)
-        confirmation = input(f"Are you sure you want to securely erase disk ID: {disk_id}? This cannot be undone. (y/n): ").strip().lower()
-        if confirmation in {"y", "n"}:
-            return confirmation == "y"
-        print("Invalid input. Please enter 'y' or 'n'.")
+        try:
+            # Use disk identifier instead of device path
+            disk_id = get_disk_serial(disk)
+            confirmation = input(f"Are you sure you want to securely erase disk ID: {disk_id}? This cannot be undone. (y/n): ").strip().lower()
+            if confirmation in {"y", "n"}:
+                return confirmation == "y"
+            print("Invalid input. Please enter 'y' or 'n'.")
+        except KeyboardInterrupt:
+            log_error("Erasure confirmation interrupted by user (Ctrl+C)")
+            print("\nErasure confirmation interrupted by user (Ctrl+C)")
+            sys.exit(130)
+
 
 def get_disk_confirmations(disks: list[str]) -> list[str]:
-    return [disk for disk in disks if confirm_erasure(disk)]
+    try:
+        return [disk for disk in disks if confirm_erasure(disk)]
+    except KeyboardInterrupt:
+        log_error("Disk confirmation process interrupted by user (Ctrl+C)")
+        print("\nDisk confirmation process interrupted by user (Ctrl+C)")
+        sys.exit(130)
 
 def run_cli_mode(args):
     """Run the original command-line interface version"""
@@ -518,14 +546,22 @@ def run_cli_mode(args):
                     future.result()
                 except Exception as e:
                     log_error(f"Error processing disk: {str(e)}")
+                except KeyboardInterrupt:
+                    # Cancel all pending futures
+                    for f in futures:
+                        f.cancel()
+                    log_error("Disk operations interrupted by user (Ctrl+C)")
+                    print("\nDisk operations interrupted by user (Ctrl+C)")
+                    sys.exit(130)
 
         print("All operations completed successfully.")
         log_info("All operations completed successfully.")
+        log_info("-------------------------------------------")
         
     except KeyboardInterrupt:
         print("\nTerminating program")
-        log_error("Program terminated by user")
-        sys.exit(1)
+        log_error("Program terminated by user (Ctrl+C)")
+        sys.exit(130)
 
 def run_gui_mode():
     """Run the GUI version"""
