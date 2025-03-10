@@ -5,7 +5,7 @@ import time
 import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
-from subprocess import CalledProcessError
+from subprocess import CalledProcessError, SubprocessError
 from disk_erase import erase_disk, get_disk_serial, is_ssd
 from disk_partition import partition_disk
 from disk_format import format_disk
@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from log_handler import log_info, log_error, log_erase_operation, blank
 import threading
 import re
+import errno
 
 class DiskEraserGUI:
     def __init__(self, root):
@@ -154,9 +155,21 @@ class DiskEraserGUI:
                 if match:
                     return match.group(1)
             return None
-        except Exception as e:
-            self.update_gui_log(f"Error determining active disk: {str(e)}")
-            log_error(f"Error determining active disk: {str(e)}")
+        except FileNotFoundError:
+            self.update_gui_log(f"Error: 'df' command not found")
+            log_error(f"Error: 'df' command not found")
+            return None
+        except CalledProcessError as e:
+            self.update_gui_log(f"Error running 'df' command: {str(e)}")
+            log_error(f"Error running 'df' command: {str(e)}")
+            return None
+        except (IndexError, ValueError) as e:
+            self.update_gui_log(f"Error parsing 'df' output: {str(e)}")
+            log_error(f"Error parsing 'df' output: {str(e)}")
+            return None
+        except KeyboardInterrupt:
+            self.update_gui_log("Operation interrupted by user")
+            log_error("Operation interrupted by user")
             return None
         
     def refresh_disks(self):
@@ -257,8 +270,9 @@ class DiskEraserGUI:
                         try:
                             size_output = run_command(["lsblk", "-d", "-o", "SIZE", "-n", f"/dev/{device}"])
                             size = size_output.strip() if size_output.strip() else "Unknown"
-                        except:
+                        except (FileNotFoundError, CalledProcessError) as e:
                             size = "Unknown"
+                            self.update_gui_log(f"Could not determine size for {device}: {str(e)}")
                         
                         disks.append({
                             "device": f"/dev/{device}",
@@ -267,8 +281,23 @@ class DiskEraserGUI:
                         })
             
             return disks
-        except Exception as e:
-            error_msg = f"Error getting disk list: {str(e)}"
+        except FileNotFoundError:
+            error_msg = "Error: 'lsblk' command not found. Install 'util-linux' package."
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            return []
+        except CalledProcessError as e:
+            error_msg = f"Error running 'lsblk' command: {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            return []
+        except (IndexError, ValueError) as e:
+            error_msg = f"Error parsing disk information: {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            return []
+        except KeyboardInterrupt:
+            error_msg = "Disk listing interrupted by user"
             self.update_gui_log(error_msg)
             log_error(error_msg)
             return []
@@ -359,8 +388,12 @@ class DiskEraserGUI:
                     completed_disks += 1
                     self.update_progress((completed_disks / total_disks) * 100)
                     self.status_var.set(f"Completed {completed_disks}/{total_disks} disks")
-                except Exception as e:
-                    error_msg = f"Error processing disk: {str(e)}"
+                except (CalledProcessError, FileNotFoundError, PermissionError, OSError) as e:
+                    error_msg = f"Error processing disk {disk}: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                except KeyboardInterrupt:
+                    error_msg = "Operation interrupted by user"
                     self.update_gui_log(error_msg)
                     log_error(error_msg)
             
@@ -375,11 +408,16 @@ class DiskEraserGUI:
             disk_serial = get_disk_serial(disk_name)
             self.update_gui_log(f"Processing disk identifier: {disk_serial}")
             log_info(f"Processing disk identifier: {disk_serial}")
-        except Exception as e:
+        except (SubprocessError, FileNotFoundError) as e:
             error_msg = f"Could not get disk identifier: {str(e)}"
             self.update_gui_log(error_msg)
             log_error(error_msg)
             disk_serial = f"unknown_{disk_name}"
+        except KeyboardInterrupt:
+            error_msg = "Disk identification interrupted by user"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            raise
         
         try:
             self.status_var.set(f"Erasing {disk_serial}...")
@@ -425,6 +463,26 @@ class DiskEraserGUI:
             self.update_gui_log(error_msg)
             log_error(error_msg)
             raise
+        except FileNotFoundError as e:
+            error_msg = f"Command not found: {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            raise
+        except PermissionError as e:
+            error_msg = f"Permission denied: {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            raise
+        except OSError as e:
+            error_msg = f"OS error: {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            raise
+        except KeyboardInterrupt:
+            error_msg = "Operation interrupted by user"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            raise
     
     def update_progress(self, value):
         self.progress_var.set(value)
@@ -454,8 +512,20 @@ def process_disk(disk: str, fs_choice: str, passes: int) -> None:
         log_erase_operation(disk_id, fs_choice)
         
         log_info(f"Completed operations on disk ID: {disk_id}")
-    except Exception as e:
-        log_error(f"Error processing disk {disk}: {str(e)}")
+    except FileNotFoundError as e:
+        log_error(f"Required command not found: {str(e)}")
+        raise
+    except CalledProcessError as e:
+        log_error(f"Command execution failed for disk {disk}: {str(e)}")
+        raise
+    except PermissionError as e:
+        log_error(f"Permission denied for disk {disk}: {str(e)}")
+        raise
+    except OSError as e:
+        log_error(f"OS error for disk {disk}: {str(e)}")
+        raise
+    except KeyboardInterrupt:
+        log_error(f"Processing of disk {disk} interrupted by user")
         raise
 
 def select_disks() -> list[str]:
@@ -494,6 +564,15 @@ def select_disks() -> list[str]:
         log_error("Disk selection interrupted by user (Ctrl+C)")
         print("\nDisk selection interrupted by user (Ctrl+C)")
         sys.exit(130)
+    except IOError as e:
+        if e.errno == errno.ENOENT:
+            log_error(f"File not found: {str(e)}")
+        elif e.errno == errno.EACCES:
+            log_error(f"Permission denied: {str(e)}")
+        else:
+            log_error(f"I/O error: {str(e)}")
+        print(f"Error: {str(e)}")
+        return []
 
 def confirm_erasure(disk: str) -> bool:
     while True:
@@ -508,6 +587,10 @@ def confirm_erasure(disk: str) -> bool:
             log_error("Erasure confirmation interrupted by user (Ctrl+C)")
             print("\nErasure confirmation interrupted by user (Ctrl+C)")
             sys.exit(130)
+        except EOFError:
+            log_error("Unexpected end of input during confirmation")
+            print("\nUnexpected end of input")
+            return False
 
 
 def get_disk_confirmations(disks: list[str]) -> list[str]:
@@ -517,6 +600,10 @@ def get_disk_confirmations(disks: list[str]) -> list[str]:
         log_error("Disk confirmation process interrupted by user (Ctrl+C)")
         print("\nDisk confirmation process interrupted by user (Ctrl+C)")
         sys.exit(130)
+    except EOFError:
+        log_error("Unexpected end of input during disk confirmation")
+        print("\nUnexpected end of input")
+        return []
 
 def run_cli_mode(args):
     """Run the original command-line interface version"""
@@ -542,11 +629,22 @@ def run_cli_mode(args):
 
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(process_disk, disk, fs_choice, passes) for disk in confirmed_disks]
+            
             for future in as_completed(futures):
                 try:
                     future.result()
-                except Exception as e:
-                    log_error(f"Error processing disk: {str(e)}")
+                except FileNotFoundError as e:
+                    log_error(f"Required command not found: {str(e)}")
+                    print(f"Error: Required command not found: {str(e)}")
+                except CalledProcessError as e:
+                    log_error(f"Command execution failed: {str(e)}")
+                    print(f"Error: Command execution failed: {str(e)}")
+                except PermissionError as e:
+                    log_error(f"Permission denied: {str(e)}")
+                    print(f"Error: Permission denied: {str(e)}")
+                except OSError as e:
+                    log_error(f"OS error: {str(e)}")
+                    print(f"Error: OS error: {str(e)}")
                 except KeyboardInterrupt:
                     # Cancel all pending futures
                     for f in futures:
@@ -562,6 +660,14 @@ def run_cli_mode(args):
         print("\nTerminating program")
         log_error("Program terminated by user (Ctrl+C)")
         sys.exit(130)
+    except SystemExit:
+        # Allow system exit to propagate
+        raise
+    except Exception as e:
+        # Keep one generic exception handler as last resort
+        log_error(f"Unexpected error: {str(e)}")
+        print(f"An unexpected error occurred: {str(e)}")
+        sys.exit(1)
 
 def run_gui_mode():
     """Run the GUI version"""

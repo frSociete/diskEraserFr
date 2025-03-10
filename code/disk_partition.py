@@ -6,7 +6,7 @@ from subprocess import CalledProcessError
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def partition_disk(disk: str) -> None:
-    logging.info(f"Partitioning disk {disk}...")
+    print(f"Partitioning disk {disk}...")
 
     try:
         # Make sure we're working with just the device name without /dev/
@@ -18,7 +18,7 @@ def partition_disk(disk: str) -> None:
         # Create a primary partition using 100% of disk space
         run_command(["parted", f"/dev/{disk_name}", "--script", "mkpart", "primary", "0%", "100%"])
         
-        logging.info(f"Disk {disk_name} partitioned successfully.")
+        print(f"Disk {disk_name} partitioned successfully.")
     except FileNotFoundError:
         logging.error(f"Error: `parted` command not found. Ensure it is installed.")
         sys.exit(2)
