@@ -30,3 +30,8 @@ def log_info(message: str) -> None:
 def log_error(message: str) -> None:
     """Log error message to both the console and log file."""
     logger.error(message)
+
+def blank() -> None:
+    """Add blank lines to separated erasuring process between different execution"""
+    with open("/var/log/disk_erase.log", "a") as log_file:
+        log_file.write("\n----------------------------------\n")

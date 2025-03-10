@@ -12,7 +12,7 @@ from disk_format import format_disk
 from utils import list_disks, choose_filesystem, run_command
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from log_handler import log_info, log_error, log_erase_operation
+from log_handler import log_info, log_error, log_erase_operation, blank
 import threading
 import re
 
@@ -363,7 +363,7 @@ class DiskEraserGUI:
                     error_msg = f"Error processing disk: {str(e)}"
                     self.update_gui_log(error_msg)
                     log_error(error_msg)
-        
+            
         self.status_var.set("Erasure process completed")
         messagebox.showinfo("Complete", "Disk erasure operation has completed!")
     
@@ -418,7 +418,8 @@ class DiskEraserGUI:
             
             self.update_gui_log(f"Completed operations on disk ID: {disk_serial}")
             log_info(f"Completed operations on disk ID: {disk_serial}")
-            
+            blank()
+
         except CalledProcessError as e:
             error_msg = f"Error processing disk ID: {disk_serial}: {str(e)}"
             self.update_gui_log(error_msg)
@@ -555,9 +556,8 @@ def run_cli_mode(args):
                     sys.exit(130)
 
         print("All operations completed successfully.")
-        log_info("All operations completed successfully.")
-        log_info("-------------------------------------------")
-        
+        log_info("All operations completed successfully.")        
+            
     except KeyboardInterrupt:
         print("\nTerminating program")
         log_error("Program terminated by user (Ctrl+C)")
