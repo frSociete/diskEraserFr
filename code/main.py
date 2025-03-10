@@ -14,18 +14,21 @@ from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from log_handler import log_info, log_error, log_erase_operation
 import threading
-import logging
+import re
 
 class DiskEraserGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Secure Disk Eraser")
         self.root.geometry("600x500")
+        # Set fullscreen mode to True
+        self.root.attributes("-fullscreen", True)
         self.disk_vars = {}
         self.filesystem_var = tk.StringVar(value="ext4")
         self.passes_var = tk.StringVar(value="5")
         self.disks = []
         self.disk_progress = {}
+        self.active_disk = self.get_active_disk()
         
         # Check for root privileges
         if os.geteuid() != 0:
@@ -65,6 +68,11 @@ class DiskEraserGUI:
         self.disk_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
+        # Add disclaimer label at the bottom of disk frame
+        self.disclaimer_var = tk.StringVar(value="")
+        self.disclaimer_label = ttk.Label(disk_frame, textvariable=self.disclaimer_var, foreground="red", wraplength=250)
+        self.disclaimer_label.pack(side=tk.BOTTOM, pady=5)
+        
         # Refresh button
         refresh_button = ttk.Button(disk_frame, text="Refresh Disks", command=self.refresh_disks)
         refresh_button.pack(pady=10)
@@ -92,6 +100,10 @@ class DiskEraserGUI:
         passes_entry = ttk.Entry(passes_frame, textvariable=self.passes_var, width=5)
         passes_entry.pack(side=tk.LEFT, padx=5)
         
+        # Exit button
+        exit_button = ttk.Button(options_frame, text="Exit Fullscreen", command=self.toggle_fullscreen)
+        exit_button.pack(pady=5, padx=10, fill=tk.X)
+        
         # Start button
         start_button = ttk.Button(options_frame, text="Start Erasure", command=self.start_erasure)
         start_button.pack(pady=20, padx=10, fill=tk.X)
@@ -118,6 +130,29 @@ class DiskEraserGUI:
         
         self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    def toggle_fullscreen(self):
+        """Toggle fullscreen mode"""
+        is_fullscreen = self.root.attributes("-fullscreen")
+        self.root.attributes("-fullscreen", not is_fullscreen)
+    
+    def get_active_disk(self):
+        """Get the disk containing the active filesystem"""
+        try:
+            # Get the mount point of the root filesystem
+            output = run_command(["df", "-h", "/"])
+            lines = output.strip().split('\n')
+            if len(lines) >= 2:  # Header plus at least one entry
+                # The device should be in the first column of the second line
+                device = lines[1].split()[0]
+                # Extract just the base device (e.g., sda from /dev/sda1)
+                match = re.search(r'/dev/([a-zA-Z]+)', device)
+                if match:
+                    return match.group(1)
+            return None
+        except Exception as e:
+            self.log(f"Error determining active disk: {str(e)}")
+            return None
         
     def refresh_disks(self):
         # Clear existing disk checkboxes
@@ -132,8 +167,15 @@ class DiskEraserGUI:
         if not self.disks:
             no_disk_label = ttk.Label(self.scrollable_disk_frame, text="No disks found")
             no_disk_label.pack(pady=10)
+            self.disclaimer_var.set("")
             return
             
+        # Set disclaimer if we found an active disk
+        if self.active_disk:
+            self.disclaimer_var.set(f"WARNING: Disk marked in red contains the active filesystem. Erasing this disk will cause system failure and data loss!")
+        else:
+            self.disclaimer_var.set("")
+        
         # Create checkboxes for each disk
         for disk in self.disks:
             frame = ttk.Frame(self.scrollable_disk_frame)
@@ -151,9 +193,15 @@ class DiskEraserGUI:
             is_device_ssd = is_ssd(device_name)
             ssd_indicator = " (SSD)" if is_device_ssd else ""
             
+            # Set the text color to red if this is the active disk
+            is_active = self.active_disk and self.active_disk in device_name
+            text_color = "red" if is_active else "black"
+            active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
+            
             disk_label = ttk.Label(
                 frame, 
-                text=f"{disk_identifier}{ssd_indicator} ({disk['size']}) - {disk['model']}"
+                text=f"{disk_identifier}{ssd_indicator}{active_indicator} ({disk['size']}) - {disk['model']}",
+                foreground=text_color
             )
             disk_label.pack(side=tk.LEFT, padx=5)
     
@@ -224,6 +272,23 @@ class DiskEraserGUI:
         if not selected_disks:
             messagebox.showwarning("Warning", "No disks selected!")
             return
+        
+        # Check if active disk is selected
+        active_disk_selected = False
+        for disk in selected_disks:
+            disk_name = disk.replace('/dev/', '')
+            if self.active_disk and self.active_disk in disk_name:
+                active_disk_selected = True
+                break
+        
+        # Additional warning for active disk
+        if active_disk_selected:
+            if not messagebox.askyesno("DANGER - SYSTEM DISK SELECTED", 
+                                      "WARNING: You have selected the ACTIVE SYSTEM DISK!\n\n"
+                                      "Erasing this disk will CRASH your system and cause PERMANENT DATA LOSS!\n\n"
+                                      "Are you absolutely sure you want to continue?",
+                                      icon="warning"):
+                return
         
         # Get disk identifiers
         disk_identifiers = []
