@@ -446,14 +446,36 @@ def select_disks() -> list[str]:
     try:
         disk_list = list_disks()
         if not disk_list:
-            log_info("No disks detected.")
+            print("No disks detected.")
             return []
             
-    except Exception:
-        pass
+        # Show available disks to the user directly in the console
+        # WITHOUT logging to the log file
+        print("Available disks:")
+        for line in disk_list.strip().split('\n'):
+            print(line)
+            
+    except Exception as e:
+        log_error(f"Error listing disks: {str(e)}")
         
     selected_disks = input("Enter the disks to erase (comma-separated, e.g., sda,sdb): ").strip()
-    return [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
+    disk_names = [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
+    
+    # Validate disk names
+    valid_disks = []
+    for disk in disk_names:
+        # Check if disk name follows proper format (letters followed by optional numbers)
+        if re.match(r'^[a-zA-Z]+[0-9]*$', disk):
+            # Verify disk exists
+            disk_path = f"/dev/{disk}"
+            if os.path.exists(disk_path):
+                valid_disks.append(disk)
+            else:
+                print(f"Disk {disk_path} not found. Skipping.")
+        else:
+            print(f"Invalid disk name format: {disk}. Disk names should be like 'sda', 'sdb', etc. Skipping.")
+    
+    return valid_disks
 
 def confirm_erasure(disk: str) -> bool:
     while True:
@@ -462,7 +484,7 @@ def confirm_erasure(disk: str) -> bool:
         confirmation = input(f"Are you sure you want to securely erase disk ID: {disk_id}? This cannot be undone. (y/n): ").strip().lower()
         if confirmation in {"y", "n"}:
             return confirmation == "y"
-        log_info("Invalid input. Please enter 'y' or 'n'.")
+        print("Invalid input. Please enter 'y' or 'n'.")
 
 def get_disk_confirmations(disks: list[str]) -> list[str]:
     return [disk for disk in disks if confirm_erasure(disk)]
@@ -475,18 +497,19 @@ def run_cli_mode(args):
         
         disks = select_disks()
         if not disks:
-            log_info("No disks selected. Exiting.")
+            print("No disks selected. Exiting.")
             return
 
         confirmed_disks = get_disk_confirmations(disks)
         if not confirmed_disks:
-            log_info("No disks confirmed for erasure. Exiting.")
+            print("No disks confirmed for erasure. Exiting.")
             return
 
         if not fs_choice:
             fs_choice = choose_filesystem()
 
-        log_info("All disks confirmed. Starting operations...\n")
+        print("All disks confirmed. Starting operations...\n")
+        log_info("Starting disk erasure operations")
 
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(process_disk, disk, fs_choice, passes) for disk in confirmed_disks]
@@ -496,10 +519,12 @@ def run_cli_mode(args):
                 except Exception as e:
                     log_error(f"Error processing disk: {str(e)}")
 
+        print("All operations completed successfully.")
         log_info("All operations completed successfully.")
         
     except KeyboardInterrupt:
-        log_error("\nTerminating program")
+        print("\nTerminating program")
+        log_error("Program terminated by user")
         sys.exit(1)
 
 def run_gui_mode():
@@ -518,7 +543,7 @@ def main():
     
     # Check for root privileges
     if os.geteuid() != 0:
-        log_error("This program must be run as root!")
+        print("This program must be run as root!")
         sys.exit(1)
     
     # Choose mode based on arguments

@@ -21,7 +21,6 @@ def list_disks() -> str:
         # Use more explicit column specification with -o option and -n to skip header
         output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE,MODEL", "-n"])
         if output:
-            logging.info(output)
             return output
         else:
             # Fallback to a simpler command if the first one returned no results
