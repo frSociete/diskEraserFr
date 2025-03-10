@@ -100,13 +100,17 @@ class DiskEraserGUI:
         passes_entry = ttk.Entry(passes_frame, textvariable=self.passes_var, width=5)
         passes_entry.pack(side=tk.LEFT, padx=5)
         
-        # Exit button
+        # Exit fullscreen button
         exit_button = ttk.Button(options_frame, text="Exit Fullscreen", command=self.toggle_fullscreen)
         exit_button.pack(pady=5, padx=10, fill=tk.X)
         
         # Start button
         start_button = ttk.Button(options_frame, text="Start Erasure", command=self.start_erasure)
         start_button.pack(pady=20, padx=10, fill=tk.X)
+
+        # Exit program button
+        close_button = ttk.Button(options_frame, text="Exit", command=self.root.destroy)
+        close_button.pack(pady=5, padx=10, fill=tk.X)
         
         # Progress frame
         progress_frame = ttk.LabelFrame(main_frame, text="Progress")
