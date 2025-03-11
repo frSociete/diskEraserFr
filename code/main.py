@@ -74,6 +74,11 @@ class DiskEraserGUI:
         self.disclaimer_label = ttk.Label(disk_frame, textvariable=self.disclaimer_var, foreground="red", wraplength=250)
         self.disclaimer_label.pack(side=tk.BOTTOM, pady=5)
         
+        # Add SSD warning disclaimer at the bottom of disk frame
+        self.ssd_disclaimer_var = tk.StringVar(value="")
+        self.ssd_disclaimer_label = ttk.Label(disk_frame, textvariable=self.ssd_disclaimer_var, foreground="red", wraplength=250)
+        self.ssd_disclaimer_label.pack(side=tk.BOTTOM, pady=5)
+        
         # Refresh button
         refresh_button = ttk.Button(disk_frame, text="Refresh Disks", command=self.refresh_disks)
         refresh_button.pack(pady=10)
@@ -197,6 +202,7 @@ class DiskEraserGUI:
             no_disk_label = ttk.Label(self.scrollable_disk_frame, text="No disks found")
             no_disk_label.pack(pady=10)
             self.disclaimer_var.set("")
+            self.ssd_disclaimer_var.set("")
             return
             
         # Set disclaimer if we found an active disk
@@ -204,6 +210,19 @@ class DiskEraserGUI:
             self.disclaimer_var.set(f"WARNING: Disk marked in red contains the active filesystem. Erasing this disk will cause system failure and data loss!")
         else:
             self.disclaimer_var.set("")
+        
+        # Check if any SSDs are present and set the SSD disclaimer
+        has_ssd = False
+        for disk in self.disks:
+            device_name = disk['device'].replace('/dev/', '')
+            if is_ssd(device_name):
+                has_ssd = True
+                break
+                
+        if has_ssd:
+            self.ssd_disclaimer_var.set("WARNING: SSD devices detected. Multiple-pass erasure may damage SSDs and NOT achieve secure data deletion due to SSD wear leveling. For SSDs, use manufacturer-provided secure erase tools instead.")
+        else:
+            self.ssd_disclaimer_var.set("")
         
         # Create checkboxes for each disk
         for disk in self.disks:
@@ -224,7 +243,7 @@ class DiskEraserGUI:
             
             # Set the text color to red if this is the active disk
             is_active = self.active_disk and self.active_disk in device_name
-            text_color = "red" if is_active else "black"
+            text_color = "red" if is_active else "red" if is_device_ssd else "black"
             active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
             
             disk_label = ttk.Label(
@@ -338,6 +357,26 @@ class DiskEraserGUI:
                                       icon="warning"):
                 return
         
+        # Check if any SSDs are selected and show a warning
+        ssd_selected = False
+        for disk in selected_disks:
+            disk_name = disk.replace('/dev/', '')
+            if is_ssd(disk_name):
+                ssd_selected = True
+                break
+                
+        if ssd_selected:
+            if not messagebox.askyesno("WARNING - SSD DEVICE SELECTED", 
+                                      "WARNING: You have selected one or more SSD devices!\n\n"
+                                      "Using multiple-pass erasure on SSDs can:\n"
+                                      "• Damage the SSD by causing excessive wear\n"
+                                      "• Fail to securely erase data due to SSD wear leveling\n"
+                                      "• Not overwrite all sectors due to over-provisioning\n\n"
+                                      "For SSDs, manufacturer-provided secure erase tools are recommended.\n\n"
+                                      "Do you still want to continue?",
+                                      icon="warning"):
+                return
+        
         # Get disk identifiers
         disk_identifiers = []
         for disk in selected_disks:
@@ -435,6 +474,11 @@ class DiskEraserGUI:
             self.update_gui_log(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
             log_info(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
             
+            # Check if disk is SSD and log a warning
+            if is_ssd(disk_name):
+                self.update_gui_log(f"WARNING: {disk_serial} is an SSD. Multiple-pass erasure may not securely erase all data.")
+                log_info(f"WARNING: {disk_serial} is an SSD. Multiple-pass erasure may not securely erase all data.")
+            
             # Pass a log function for real-time progress
             erase_result = erase_disk(
                 disk_name, 
@@ -514,6 +558,10 @@ def process_disk(disk: str, fs_choice: str, passes: int) -> None:
         disk_id = get_disk_serial(disk)
         log_info(f"Processing disk identifier: {disk_id}")
         
+        # Check if disk is SSD and log a warning
+        if is_ssd(disk):
+            log_info(f"WARNING: {disk_id} is an SSD. Multiple-pass erasure may not securely erase all data.")
+        
         # Erase, partition, and format the disk
         erase_disk(disk, passes)
         partition_disk(disk)
@@ -552,6 +600,11 @@ def select_disks() -> list[str]:
         for line in disk_list.strip().split('\n'):
             print(line)
         
+        # Show SSD warning
+        print("\nWARNING: If any of these disks are SSDs, using this tool with multiple passes")
+        print("may damage the SSD and NOT achieve secure data deletion due to SSD wear leveling.")
+        print("For SSDs, manufacturer-provided secure erase tools are recommended instead.\n")
+        
         selected_disks = input("Enter the disks to erase (comma-separated, e.g., sda,sdb): ").strip()
         disk_names = [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
         
@@ -564,6 +617,9 @@ def select_disks() -> list[str]:
                 disk_path = f"/dev/{disk}"
                 if os.path.exists(disk_path):
                     valid_disks.append(disk)
+                    # Check if it's an SSD and warn
+                    if is_ssd(disk):
+                        print(f"WARNING: {disk} appears to be an SSD. Using this tool may damage the device and not securely erase all data.")
                 else:
                     print(f"Disk {disk_path} not found. Skipping.")
             else:
@@ -590,6 +646,13 @@ def confirm_erasure(disk: str) -> bool:
         try:
             # Use disk identifier instead of device path
             disk_id = get_disk_serial(disk)
+            # Check if disk is an SSD and add warning if necessary
+            is_disk_ssd = is_ssd(disk)
+            if is_disk_ssd:
+                print("\nWARNING: The selected disk appears to be an SSD.")
+                print("Using this program on SSDs may harm the device and not guarantee secure erasure.")
+                print("SSDs require specific secure erase commands for proper data removal.\n")
+            
             confirmation = input(f"Are you sure you want to securely erase disk ID: {disk_id}? This cannot be undone. (y/n): ").strip().lower()
             if confirmation in {"y", "n"}:
                 return confirmation == "y"
