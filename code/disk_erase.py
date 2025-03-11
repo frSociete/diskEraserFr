@@ -61,7 +61,7 @@ def is_ssd(device: str) -> bool:
         print("\nSSD check interrupted by user (Ctrl+C)")
         sys.exit(130)
 
-def erase_disk(device: str, passes: int, log_func=None) -> str:
+def erase_disk_hdd(device: str, passes: int, log_func=None) -> str:
     try:
         # Type-casting arguments to ensure correct types
         device = str(device)
