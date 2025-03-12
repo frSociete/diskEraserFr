@@ -357,9 +357,9 @@ class DiskEraserGUI:
         
         # Start processing in a separate thread
         self.status_var.set("Starting erasure process...")
-        threading.Thread(target=self.process_disks, args=(selected_disks, fs_choice, passes), daemon=True).start()
+        threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes), daemon=True).start()
     
-    def process_disks(self, disks, fs_choice, passes):
+    def progress_state(self, disks, fs_choice, passes):
         self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
         log_info(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
         self.update_gui_log(f"Selected filesystem: {fs_choice}")
