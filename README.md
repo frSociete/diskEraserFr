@@ -178,7 +178,7 @@ Here is the main structure of the project:
 ```bash
 project/
 ├── README.md               # Documentation for the project 
-├── code/                   # Main Python scripts for the tool 🐍
+├── code/                   # Main Python scripts for the tool
 │   ├── disk_erase.py       # Module for secure data erasure 
 │   ├── disk_format.py      # Module for formatting disks 
 │   ├── disk_operations.py  # Module for disk operations 
