@@ -11,7 +11,7 @@ CODE_DIR="$HOME/diskEraser/code"
 # Install necessary tools
 echo "Installing live-build and required dependencies..."
 sudo apt update
-sudo apt install -y live-build python3 python3-pip calamares calamares-settings-debian syslinux
+sudo apt install -y live-build python3 calamares calamares-settings-debian syslinux
 
 # Create working directory
 echo "Setting up live-build workspace..."
@@ -43,7 +43,7 @@ coreutils
 parted
 ntfs-3g
 python3
-python3-pip
+python3-tk
 dosfstools
 firmware-linux-free
 firmware-linux-nonfree
