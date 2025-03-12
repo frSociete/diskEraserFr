@@ -205,7 +205,7 @@ class DiskEraserGUI:
             device_name = disk['device'].replace('/dev/', '')
             disk_identifier = get_disk_serial(device_name)
             is_device_ssd = is_ssd(device_name)
-            ssd_indicator = " (SSD)" if is_device_ssd else ""
+            ssd_indicator = " (SSD)" if is_device_ssd else " (HDD)"
             
 # Set the text color to red if this is the active disk
             is_active = self.active_disk and any(disk in device_name for disk in self.active_disk)
