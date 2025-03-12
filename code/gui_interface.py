@@ -207,8 +207,9 @@ class DiskEraserGUI:
             is_device_ssd = is_ssd(device_name)
             ssd_indicator = " (SSD)" if is_device_ssd else ""
             
-            # Set the text color to red if this is the active disk
-            is_active = self.active_disk and self.active_disk in device_name
+# Set the text color to red if this is the active disk
+            is_active = self.active_disk and any(disk in device_name for disk in self.active_disk)
+
             text_color = "red" if is_active else "red" if is_device_ssd else "black"
             active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
             
@@ -289,10 +290,10 @@ class DiskEraserGUI:
         active_disk_selected = False
         for disk in selected_disks:
             disk_name = disk.replace('/dev/', '')
-            if self.active_disk and self.active_disk in disk_name:
+            if self.active_disk and any(active_disk in disk_name for active_disk in self.active_disk):
                 active_disk_selected = True
                 break
-        
+
         # Additional warning for active disk
         if active_disk_selected:
             if not messagebox.askyesno("DANGER - SYSTEM DISK SELECTED", 

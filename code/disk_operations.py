@@ -93,10 +93,13 @@ def process_disk(disk: str, fs_choice: str, passes: int, log_func=None) -> None:
         raise
 
 def get_active_disk():
-    """Get the disk containing the active filesystem"""
+    """Get the disk containing the active filesystem or live boot media"""
+    import re
     from utils import run_command
     
     try:
+        devices = set()
+        
         # Get the mount point of the root filesystem
         output = run_command(["df", "-h", "/"])
         lines = output.strip().split('\n')
@@ -106,8 +109,23 @@ def get_active_disk():
             # Extract just the base device (e.g., sda from /dev/sda1)
             match = re.search(r'/dev/([a-zA-Z]+)', device)
             if match:
-                return match.group(1)
-        return None
+                devices.add(match.group(1))
+        
+        # Look for live boot media mount points
+        output = run_command(["df", "-h"])
+        lines = output.strip().split('\n')
+        for line in lines[1:]:  # Skip header line
+            parts = line.split()
+            if len(parts) >= 6:  # Ensure we have enough columns
+                device = parts[0]
+                mount_point = parts[5]
+                
+                if "/run/live" in mount_point:
+                    match = re.search(r'/dev/([a-zA-Z]+)', device)
+                    if match:
+                        devices.add(match.group(1))
+        
+        return list(devices) if devices else None
     except FileNotFoundError:
         log_error(f"Error: 'df' command not found")
         return None
