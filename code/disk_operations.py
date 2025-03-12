@@ -1,11 +1,11 @@
 import time
-import os
 import re
 from subprocess import CalledProcessError
 from disk_erase import erase_disk_hdd, get_disk_serial, is_ssd
 from disk_partition import partition_disk
 from disk_format import format_disk
 from log_handler import log_info, log_error, log_erase_operation, blank
+from utils import run_command
 
 def process_disk(disk: str, fs_choice: str, passes: int, log_func=None) -> None:
     """
@@ -94,8 +94,6 @@ def process_disk(disk: str, fs_choice: str, passes: int, log_func=None) -> None:
 
 def get_active_disk():
     """Get the disk containing the active filesystem or live boot media"""
-    import re
-    from utils import run_command
     
     try:
         devices = set()
