@@ -15,15 +15,20 @@ def print_disk_details(disk):
     try:
         disk_id = get_disk_serial(disk)
         is_disk_ssd = is_ssd(disk)
-        active_disks = get_active_disk() or []
+        active_disks = get_active_disk()        
         
-        ssd_status = " (SSD)" if is_disk_ssd else ""
-        active_status = " (ACTIVE SYSTEM DISK)" if disk in active_disks else ""
+        # Fix: Check if any active disk name is a substring of this disk name
+        is_active = False
+        if active_disks:
+            for active_disk in active_disks:
+                if active_disk in disk:
+                    is_active = True
+                    break
         
         print(f"Disk: /dev/{disk}")
         print(f"  Serial/ID: {disk_id}")
         print(f"  Type: {'SSD' if is_disk_ssd else 'HDD'}")
-        print(f"  Status: {'ACTIVE SYSTEM DISK - DANGER!' if disk in active_disks else 'Safe to erase'}")
+        print(f"  Status: {'ACTIVE SYSTEM DISK - DANGER!' if is_active else 'Safe to erase'}")
         
         if is_disk_ssd:
             print("  WARNING: This is an SSD device. Multiple-pass secure erasure:")
@@ -32,11 +37,11 @@ def print_disk_details(disk):
             print("    • May not overwrite all sectors due to over-provisioning")
             print("    • Manufacturer-provided secure erase tools are recommended")
         
-        if disk in active_disks:
+        if is_active:
             print("  DANGER: This is the ACTIVE SYSTEM DISK! Erasing it will make your system unusable.")
             print("          The system will crash if you proceed with erasing this disk.")
             
-        return disk_id, is_disk_ssd, (disk in active_disks)
+        return disk_id, is_disk_ssd, is_active
     except (SubprocessError, FileNotFoundError) as e:
         print(f"Error getting disk details: {str(e)}")
         log_error(f"Error getting disk details for {disk}: {str(e)}")
