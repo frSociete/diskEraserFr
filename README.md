@@ -41,6 +41,61 @@ The project is designed to run inside a Docker container 🐳, as a bootable ISO
 
 ---
 
+## GUI Mode Features 🖥️
+
+The GUI interface provides a user-friendly way to interact with the Disk Eraser tool:
+
+- **Fullscreen Operation**: Starts in fullscreen mode with an option to exit fullscreen
+- **Visual Disk Selection**: Shows all available disks with checkboxes for selection
+- **Disk Information Display**: Shows disk model, size, and serial number
+- **Color-Coded Warnings**: Highlights active system disks and SSDs in red
+- **SSD Warning Messages**: Displays specific warnings when SSD devices are detected
+- **Progress Tracking**: Shows real-time progress of the erasure operation
+- **Live Log Display**: Provides a scrollable log window to monitor operations
+- **Multiple Confirmation Dialogs**: Ensures users understand the risks before proceeding
+- **Filesystem Selection**: Radio buttons for choosing between EXT4, NTFS, and FAT32
+- **Pass Configuration**: Allows users to specify the number of overwrite passes
+- **Refresh Capability**: Button to refresh the disk list
+
+---
+
+## CLI Mode Features 💻
+
+The command-line interface offers powerful features for advanced users and scripting:
+
+- **Detailed Disk Information**: Shows comprehensive details about each disk
+- **Serial Number Identification**: Identifies disks by their serial numbers
+- **Type Detection**: Displays whether each disk is an SSD or HDD
+- **Active Disk Warning**: Clearly marks system disks with danger warnings
+- **Multi-Level Confirmation**: Requires explicit confirmation for each disk
+- **Enhanced Safety**: Requires typing "DESTROY" to confirm system disk erasure
+- **Parallel Processing**: Erases multiple disks simultaneously
+- **Progress Reporting**: Shows real-time progress for each disk operation
+- **Filesystem Selection**: Interactive menu for choosing the filesystem
+- **Argument Support**: Accepts command-line arguments for automation
+- **Error Handling**: Detailed error messages and logging
+
+---
+
+## ISO Features 💿
+
+The bootable ISO provides a standalone environment for disk erasure:
+
+- **Debian-Based Live Environment**: Built on Debian Bookworm for stability
+- **XFCE Desktop Environment**: Provides a lightweight graphical interface
+- **Auto-Start Capability**: Automatically launches the Disk Eraser tool on boot
+- **French AZERTY Keyboard Support**: Configured for French users by default
+- **Terminal Auto-Launch**: Starts the tool automatically in terminal mode
+- **Dual Boot Options**: Includes options to run live or install to disk
+- **Calamares Installer**: Integrated installer for permanent installation
+- **Network Support**: Includes Network Manager for connectivity
+- **Complete Firmware Support**: Includes non-free firmware for wide hardware compatibility
+- **Integrated Disk Eraser**: Tool is pre-installed and ready to use
+- **Desktop Launcher**: Desktop icon for easy access to the tool
+- **Passwordless Sudo**: Configured for ease of use without password prompts
+
+---
+
 ## Prerequisites 📋
 
 - **Root privileges** 👑 (required for disk access)
