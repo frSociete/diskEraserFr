@@ -13,8 +13,7 @@ RUN apt-get update && \
     dosfstools \
     e2fsprogs \
     util-linux \
-    python3 \
-    python3-pip && \
+    python3 && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the entire project into the /app directory in the container
