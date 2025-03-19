@@ -16,7 +16,7 @@
 
 The tool operates with pre-selected confirmation and formatting options, requiring no further interaction from the user once the erasure process begins.
 
-The project is designed to run inside a Docker container 🐳, as a bootable ISO 💿, directly as Python code 🐍, or as a Linux command stored in `/usr/local/bin` under the name `diskeraser`.
+The project is designed to run as a bootable ISO 💿, directly as Python code 🐍, or as a Linux command stored in `/usr/local/bin` under the name `diskeraser`.
 
 ---
 
@@ -30,7 +30,6 @@ The project is designed to run inside a Docker container 🐳, as a bootable ISO
 - **Parallel Erasure** ⚡: Uses multi-threading to erase multiple disks simultaneously, optimizing performance
 - **Automatic Partitioning** 📊: Configures the disk with a single partition after erasure
 - **Flexible Formatting** 📁: Supports NTFS, EXT4, or VFAT file systems
-- **Docker Support** 🐳: Runs securely in a containerized environment
 - **Bootable ISO** 💿: Can be converted into a bootable ISO for standalone operation
 - **Command Line Utility** 💻: Can be installed as a Linux command (`diskeraser`) for ease of use
 - **Configurable Erase Passes** 🔄: Users can specify the number of overwrite passes (default is 5)
@@ -99,7 +98,6 @@ The bootable ISO provides a standalone environment for disk erasure:
 ## Prerequisites 📋
 
 - **Root privileges** 👑 (required for disk access)
-- **Docker** 🐳 (if running inside a container)
 - **Python 3** 🐍 (for running the Python version)
 - **Tkinter** 🖼️ (for the GUI interface)
 - **Basic disk management knowledge** 📚, as the tool **permanently erases data** ⚠️
@@ -143,26 +141,6 @@ sudo diskeraser --cli     # For command-line mode
 
 This allows you to execute the tool as a simple command from anywhere on your system.
 
-### Using with Docker 🐳
-
-You can also deploy a Docker container to use the disks eraser tool. If Docker is not installed on your system, you can execute the **installDocker.sh** script on a Debian based system.
-[Install Docker Script](https://github.com/Bolo101/Qemu.sh)
-
-For other distributions please access the Docker download page.
-
-#### Version 3.1 (New Version) 🆕
-
-1. **Pull the latest Docker image**:
-
-```bash
-docker pull zkbolo/diskeraser-v3.1:latest
-```
-
-2. **Run the Docker Image with Necessary Privileges**:
-
-```bash
-docker run --rm -it --privileged zkbolo/diskeraser-v3.1:latest
-```
 
 3. **Follow the interactive instructions inside the container to select and erase one or more disks**:
 
@@ -201,7 +179,7 @@ sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
 
 ## Command Line Options ⌨️
 
-When running the project directly in Python or via Docker, you can provide arguments to automate certain steps:
+When running the project directly in Python you can provide arguments to automate certain steps:
 
 **Mode selection**:
 - `--cli`: Run in command-line interface mode instead of GUI mode
@@ -247,8 +225,7 @@ project/
 │   ├── forgeIsoPy.sh       # Script to generate the bootable ISO 
 │   └── makefile            # Build automation for ISO creation 
 ├── setup.sh                # Script to install dependencies and prepare the project 
-├── LICENSE                 # Common Creative 4 license 
-└── Dockerfile              # Dockerfile to build docker image locally 
+└── LICENSE                 # Common Creative 4 license 
 ```
 
 ---
