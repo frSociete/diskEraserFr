@@ -11,7 +11,7 @@ CODE_DIR="$HOME/diskEraser/code"
 # Install necessary tools
 echo "Installing live-build and required dependencies..."
 sudo apt update
-sudo apt install -y live-build python3 python3-pip calamares calamares-settings-debian syslinux
+sudo apt install -y live-build python3 calamares calamares-settings-debian syslinux
 
 # Create working directory
 echo "Setting up live-build workspace..."
@@ -43,7 +43,7 @@ coreutils
 parted
 ntfs-3g
 python3
-python3-pip
+python3-tk
 dosfstools
 firmware-linux-free
 firmware-linux-nonfree
@@ -106,17 +106,59 @@ mkdir -p config/includes.chroot/etc/sudoers.d/
 echo "user ALL=(ALL) NOPASSWD: ALL" > config/includes.chroot/etc/sudoers.d/passwordless
 chmod 0440 config/includes.chroot/etc/sudoers.d/passwordless
 
-# Configure .bashrc to run main.py on login
-echo "Configuring .bashrc to run main.py as root and show message..."
+# Create application launcher for the installed version
+echo "Creating application launcher..."
+mkdir -p config/includes.chroot/usr/share/applications/
+cat << EOF > config/includes.chroot/usr/share/applications/secure_disk_eraser.desktop
+[Desktop Entry]
+Version=1.0
+Name=Secure Disk Eraser
+Comment=Securely erase disks and partitions
+Exec=sudo /usr/local/bin/de
+Icon=drive-harddisk
+Terminal=true
+Type=Application
+Categories=System;Security;
+Keywords=disk;erase;secure;wipe;
+EOF
+
+# Make the launcher executable
+chmod +x config/includes.chroot/usr/share/applications/secure_disk_eraser.desktop
+
+# Auto-start in live mode - Create XFCE autostart
+mkdir -p config/includes.chroot/etc/xdg/autostart/
+cat << EOF > config/includes.chroot/etc/xdg/autostart/disk-eraser.desktop
+[Desktop Entry]
+Type=Application
+Name=Disk Eraser
+Comment=Start Disk Eraser automatically in live mode
+Exec=sudo /usr/local/bin/de
+Terminal=true
+Icon=drive-harddisk
+Categories=System;Security;
+OnlyShowIn=XFCE;
+EOF
+
+# Configure .bashrc to run main.py on login in live mode but not in installed mode
+echo "Configuring .bashrc to run main.py in live mode..."
 mkdir -p config/includes.chroot/etc/skel/
 cat << 'EOF' > config/includes.chroot/etc/skel/.bashrc
-echo "Type 'sudo de' to use the diskEraser program"
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
 
-if [ "$(id -u)" -ne 0 ]; then
-    echo "Running main.py as root..."
-    sudo python3 /usr/local/bin/main.py
-else
-    python3 /usr/local/bin/main.py
+# Display information about the disk eraser
+echo "Secure Disk Eraser"
+echo "Type 'sudo de' to use the Secure Disk Eraser program"
+
+# Check if we're in live mode
+if grep -q "boot=live" /proc/cmdline; then
+    # Only auto-start in terminals when in live mode
+    if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+        echo "Live mode detected. Starting disk eraser..."
+        sudo /usr/local/bin/de
+    fi
 fi
 EOF
 
