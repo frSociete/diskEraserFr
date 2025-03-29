@@ -158,7 +158,7 @@ cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
 
 If you prefer not to build the ISO yourself, you can download the pre-built ISO files for your system from the following links:
 
-- [Download the latest version of the ISO (version 3.1)](https://archive.org/details/diskEraserV3-1)
+- [Download the latest version of the ISO (version 4.0)](https://archive.org/details/diskEraser-v4)
 
 This ISO file is ready to be flashed to a USB key and used for bootable operations.
 
