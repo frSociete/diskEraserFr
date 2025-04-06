@@ -1,7 +1,7 @@
 import time
 import re
 from subprocess import CalledProcessError
-from disk_erase import erase_disk_hdd, get_disk_serial, is_ssd
+from disk_erase import erase_disk_hdd, get_disk_serial, is_ssd, erase_disk_crypto
 from disk_partition import partition_disk
 from disk_format import format_disk
 from log_handler import log_info, log_error, log_erase_operation, blank
