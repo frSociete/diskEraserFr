@@ -4,7 +4,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 from subprocess import CalledProcessError, SubprocessError
-from disk_erase import erase_disk_hdd, get_disk_serial, is_ssd
+from disk_erase import erase_disk_hdd, erase_disk_crypto, get_disk_serial, is_ssd
 from disk_partition import partition_disk
 from disk_format import format_disk
 from utils import list_disks
@@ -23,6 +23,7 @@ class DiskEraserGUI:
         self.disk_vars = {}
         self.filesystem_var = tk.StringVar(value="ext4")
         self.passes_var = tk.StringVar(value="5")
+        self.erase_method_var = tk.StringVar(value="overwrite")  # Default to overwrite method
         self.disks = []
         self.disk_progress = {}
         self.active_disk = get_active_disk()
@@ -83,6 +84,26 @@ class DiskEraserGUI:
         options_frame = ttk.LabelFrame(main_frame, text="Options")
         options_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5, pady=5)
         
+        # Erasure method options
+        method_label = ttk.Label(options_frame, text="Erasure Method:")
+        method_label.pack(anchor="w", pady=(10, 5))
+        
+        methods = [("Standard Overwrite", "overwrite"), ("Cryptographic Erasure", "crypto")]
+        for text, value in methods:
+            rb = ttk.Radiobutton(options_frame, text=text, value=value, variable=self.erase_method_var, 
+                                command=self.update_method_options)
+            rb.pack(anchor="w", padx=20)
+        
+        # Passes (for overwrite method)
+        self.passes_frame = ttk.Frame(options_frame)
+        self.passes_frame.pack(fill=tk.X, pady=10, padx=5)
+        
+        passes_label = ttk.Label(self.passes_frame, text="Number of passes:")
+        passes_label.pack(side=tk.LEFT, padx=5)
+        
+        passes_entry = ttk.Entry(self.passes_frame, textvariable=self.passes_var, width=5)
+        passes_entry.pack(side=tk.LEFT, padx=5)
+        
         # Filesystem options
         fs_label = ttk.Label(options_frame, text="Choose Filesystem:")
         fs_label.pack(anchor="w", pady=(10, 5))
@@ -91,16 +112,6 @@ class DiskEraserGUI:
         for text, value in filesystems:
             rb = ttk.Radiobutton(options_frame, text=text, value=value, variable=self.filesystem_var)
             rb.pack(anchor="w", padx=20)
-        
-        # Passes
-        passes_frame = ttk.Frame(options_frame)
-        passes_frame.pack(fill=tk.X, pady=10, padx=5)
-        
-        passes_label = ttk.Label(passes_frame, text="Number of passes:")
-        passes_label.pack(side=tk.LEFT, padx=5)
-        
-        passes_entry = ttk.Entry(passes_frame, textvariable=self.passes_var, width=5)
-        passes_entry.pack(side=tk.LEFT, padx=5)
         
         # Exit fullscreen button
         exit_button = ttk.Button(options_frame, text="Exit Fullscreen", command=self.toggle_fullscreen)
@@ -139,6 +150,15 @@ class DiskEraserGUI:
         
         # Protocol for window close event
         self.root.protocol("WM_DELETE_WINDOW", self.exit_application)
+    
+    def update_method_options(self):
+        """Update UI based on the selected erasure method"""
+        if self.erase_method_var.get() == "crypto":
+            # Hide passes frame for cryptographic method
+            self.passes_frame.pack_forget()
+        else:
+            # Show passes frame for standard overwrite method
+            self.passes_frame.pack(fill=tk.X, pady=10, padx=5)
     
     def exit_application(self):
         """Log and close the application when Exit is clicked"""
@@ -207,7 +227,7 @@ class DiskEraserGUI:
             is_device_ssd = is_ssd(device_name)
             ssd_indicator = " (SSD)" if is_device_ssd else " (HDD)"
             
-# Set the text color to red if this is the active disk
+            # Set the text color to red if this is the active disk
             is_active = self.active_disk and any(disk in device_name for disk in self.active_disk)
 
             text_color = "red" if is_active else "red" if is_device_ssd else "black"
@@ -303,25 +323,29 @@ class DiskEraserGUI:
                                       icon="warning"):
                 return
         
-        # Check if any SSDs are selected and show a warning
+        # Get erasure method
+        erase_method = self.erase_method_var.get()
+        
+        # Check if any SSDs are selected and show a warning for overwrite method
         ssd_selected = False
-        for disk in selected_disks:
-            disk_name = disk.replace('/dev/', '')
-            if is_ssd(disk_name):
-                ssd_selected = True
-                break
-                
-        if ssd_selected:
-            if not messagebox.askyesno("WARNING - SSD DEVICE SELECTED", 
-                                      "WARNING: You have selected one or more SSD devices!\n\n"
-                                      "Using multiple-pass erasure on SSDs can:\n"
-                                      "• Damage the SSD by causing excessive wear\n"
-                                      "• Fail to securely erase data due to SSD wear leveling\n"
-                                      "• Not overwrite all sectors due to over-provisioning\n\n"
-                                      "For SSDs, manufacturer-provided secure erase tools are recommended.\n\n"
-                                      "Do you still want to continue?",
-                                      icon="warning"):
-                return
+        if erase_method == "overwrite":
+            for disk in selected_disks:
+                disk_name = disk.replace('/dev/', '')
+                if is_ssd(disk_name):
+                    ssd_selected = True
+                    break
+                    
+            if ssd_selected:
+                if not messagebox.askyesno("WARNING - SSD DEVICE SELECTED", 
+                                          "WARNING: You have selected one or more SSD devices!\n\n"
+                                          "Using multiple-pass erasure on SSDs can:\n"
+                                          "• Damage the SSD by causing excessive wear\n"
+                                          "• Fail to securely erase data due to SSD wear leveling\n"
+                                          "• Not overwrite all sectors due to over-provisioning\n\n"
+                                          "For SSDs, manufacturer-provided secure erase tools are recommended.\n\n"
+                                          "Do you still want to continue?",
+                                          icon="warning"):
+                    return
         
         # Get disk identifiers
         disk_identifiers = []
@@ -331,8 +355,12 @@ class DiskEraserGUI:
         
         # Confirm erasure
         disk_list = "\n".join(disk_identifiers)
+        
+        # Add method-specific information to confirmation dialog
+        method_info = "using cryptographic erasure" if erase_method == "crypto" else f"with {self.passes_var.get()} pass overwrite"
+        
         if not messagebox.askyesno("Confirm Erasure", 
-                                  f"WARNING: You are about to securely erase the following disks:\n\n{disk_list}\n\n"
+                                  f"WARNING: You are about to securely erase the following disks {method_info}:\n\n{disk_list}\n\n"
                                   "This operation CANNOT be undone and ALL DATA WILL BE LOST!\n\n"
                                   "Are you absolutely sure you want to continue?"):
             return
@@ -347,22 +375,26 @@ class DiskEraserGUI:
         # Get options
         fs_choice = self.filesystem_var.get()
         
-        try:
-            passes = int(self.passes_var.get())
-            if passes < 1:
-                messagebox.showerror("Error", "Number of passes must be at least 1")
+        # For overwrite method, validate passes
+        passes = 1  # Default value
+        if erase_method == "overwrite":
+            try:
+                passes = int(self.passes_var.get())
+                if passes < 1:
+                    messagebox.showerror("Error", "Number of passes must be at least 1")
+                    return
+            except ValueError:
+                messagebox.showerror("Error", "Number of passes must be a valid integer")
                 return
-        except ValueError:
-            messagebox.showerror("Error", "Number of passes must be a valid integer")
-            return
         
         # Start processing in a separate thread
         self.status_var.set("Starting erasure process...")
-        threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes), daemon=True).start()
+        threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes, erase_method), daemon=True).start()
     
-    def progress_state(self, disks, fs_choice, passes):
-        self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
-        log_info(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
+    def progress_state(self, disks, fs_choice, passes, erase_method):
+        method_str = "cryptographic erasure" if erase_method == "crypto" else f"standard {passes}-pass overwrite"
+        self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
+        log_info(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
         self.update_gui_log(f"Selected filesystem: {fs_choice}")
         log_info(f"Selected filesystem: {fs_choice}")
         
@@ -374,7 +406,7 @@ class DiskEraserGUI:
             self.disk_progress = {disk: 0 for disk in disks}
             
             # Submit all disk tasks
-            futures = {executor.submit(self.process_single_disk, disk, fs_choice, passes): disk for disk in disks}
+            futures = {executor.submit(self.process_single_disk, disk, fs_choice, passes, erase_method): disk for disk in disks}
             
             # Process results as they complete
             for future in as_completed(futures):
@@ -396,7 +428,7 @@ class DiskEraserGUI:
         self.status_var.set("Erasure process completed")
         messagebox.showinfo("Complete", "Disk erasure operation has completed!")
     
-    def process_single_disk(self, disk, fs_choice, passes):
+    def process_single_disk(self, disk, fs_choice, passes, erase_method):
         # Get the stable disk identifier before erasure
         disk_name = disk.replace('/dev/', '')
         try:
@@ -416,21 +448,30 @@ class DiskEraserGUI:
             raise
         
         try:
+            method_str = "cryptographic erasure" if erase_method == "crypto" else f"{passes}-pass overwrite"
             self.status_var.set(f"Erasing {disk_serial}...")
-            self.update_gui_log(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
-            log_info(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
+            self.update_gui_log(f"Starting secure erase using {method_str} on disk ID: {disk_serial}")
+            log_info(f"Starting secure erase using {method_str} on disk ID: {disk_serial}")
             
-            # Check if disk is SSD and log a warning
-            if is_ssd(disk_name):
+            # Check if disk is SSD and log a warning for overwrite method
+            if erase_method == "overwrite" and is_ssd(disk_name):
                 self.update_gui_log(f"WARNING: {disk_serial} is an SSD. Multiple-pass erasure may not securely erase all data.")
                 log_info(f"WARNING: {disk_serial} is an SSD. Multiple-pass erasure may not securely erase all data.")
             
-            # Pass a log function for real-time progress
-            erase_result = erase_disk_hdd(
-                disk_name, 
-                passes, 
-                log_func=lambda msg: self.update_gui_log(f"Shred progress: {msg}")
-            )
+            # Use the appropriate erasure method
+            if erase_method == "crypto":
+                # Use cryptographic erasure
+                erase_result = erase_disk_crypto(
+                    disk_name, 
+                    log_func=lambda msg: self.update_gui_log(f"Crypto progress: {msg}")
+                )
+            else:
+                # Use standard overwrite method
+                erase_result = erase_disk_hdd(
+                    disk_name, 
+                    passes, 
+                    log_func=lambda msg: self.update_gui_log(f"Shred progress: {msg}")
+                )
             
             self.update_gui_log(f"Erase completed on disk ID: {disk_serial}")
             log_info(f"Erase completed on disk ID: {disk_serial}")
@@ -452,8 +493,9 @@ class DiskEraserGUI:
             log_info(f"Formatting disk ID: {disk_serial} with {fs_choice}")
             format_disk(disk_name, fs_choice)
             
-            # Log the erase operation with the stable disk identifier and filesystem
-            log_erase_operation(disk_serial, fs_choice)
+            # Log the erase operation with the stable disk identifier, method, and filesystem
+            method_for_log = "crypto" if erase_method == "crypto" else f"overwrite-{passes}"
+            log_erase_operation(disk_serial, fs_choice, method=method_for_log)
             
             self.update_gui_log(f"Completed operations on disk ID: {disk_serial}")
             log_info(f"Completed operations on disk ID: {disk_serial}")
