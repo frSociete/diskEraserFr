@@ -142,7 +142,7 @@ def get_disk_confirmations(disks: list[str]) -> list[str]:
     """Get confirmation for each disk."""
     return [disk for disk in disks if confirm_erasure(disk)]
 
-def cli_process_disk(disk, fs_choice, passes):
+def cli_process_disk(disk, fs_choice, passes, use_crypto=False):
     """
     Process a single disk for the CLI interface with status output.
     
@@ -158,12 +158,12 @@ def cli_process_disk(disk, fs_choice, passes):
         def log_progress(message):
             print(f"  {message}")
         
-        # Indicate if the disk is an SSD
-        if is_ssd(disk):
+        # Indicate if the disk is an SSD and not using crypto
+        if is_ssd(disk) and not use_crypto:
             print(f"  WARNING: {disk_id} is an SSD - multiple-pass erasure may not be effective")
         
-        # Process the disk using the imported function
-        process_disk(disk, fs_choice, passes, log_func=log_progress)
+        # Process the disk using the imported function with crypto flag
+        process_disk(disk, fs_choice, passes, use_crypto, log_func=log_progress)
         
         print(f"Successfully completed all operations on disk {disk_id}")
         return True
@@ -217,16 +217,20 @@ def run_cli_mode(args):
         # Finally, choose filesystem and number of passes
         fs_choice = args.filesystem or choose_filesystem()
         passes = args.passes
+        use_crypto = args.crypto
         
         print(f"Selected filesystem: {fs_choice}")
-        print(f"Number of passes: {passes}")
+        if use_crypto:
+            print("Erasure method: Cryptographic erasure")
+        else:
+            print(f"Erasure method: Standard with {passes} passes")
         
         print("\nAll disks confirmed. Starting operations...\n")
         log_info(f"Starting disk erasure operations on {len(confirmed_disks)} disk(s)")
         
         with ThreadPoolExecutor() as executor:
-            # Use our cli_process_disk function instead of process_disk directly
-            futures = [executor.submit(cli_process_disk, disk, fs_choice, passes) for disk in confirmed_disks]
+            # Use our cli_process_disk function with the crypto flag
+            futures = [executor.submit(cli_process_disk, disk, fs_choice, passes, use_crypto) for disk in confirmed_disks]
             
             completed = 0
             for future in as_completed(futures):

@@ -7,7 +7,7 @@ from disk_format import format_disk
 from log_handler import log_info, log_error, log_erase_operation, blank
 from utils import run_command
 
-def process_disk(disk: str, fs_choice: str, passes: int, log_func=None) -> None:
+def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = False, log_func=None) -> None:
     """
     Process a single disk: erase, partition, and format it.
     
@@ -15,6 +15,7 @@ def process_disk(disk: str, fs_choice: str, passes: int, log_func=None) -> None:
         disk: The disk name (e.g. 'sda')
         fs_choice: Filesystem choice for formatting
         passes: Number of passes for secure erasure
+        use_crypto: Whether to use cryptographic erasure method
         log_func: Optional function for logging progress
     """
     try:
@@ -24,17 +25,22 @@ def process_disk(disk: str, fs_choice: str, passes: int, log_func=None) -> None:
             log_func(f"Processing disk identifier: {disk_id}")
         
         # Check if disk is SSD and log a warning
-        if is_ssd(disk):
+        if is_ssd(disk) and not use_crypto:
             log_info(f"WARNING: {disk_id} is an SSD. Multiple-pass erasure may not securely erase all data.")
             if log_func:
                 log_func(f"WARNING: {disk_id} is an SSD. Multiple-pass erasure may not securely erase all data.")
         
-        # Erase, partition, and format the disk
-        erase_result = erase_disk_hdd(
-            disk, 
-            passes, 
-            log_func=log_func
-        )
+        # Erase disk using selected method
+        if use_crypto:
+            log_info(f"Using cryptographic erasure for disk ID: {disk_id}")
+            if log_func:
+                log_func(f"Using cryptographic erasure for disk ID: {disk_id}")
+            erase_result = erase_disk_crypto(disk, log_func=log_func)
+        else:
+            log_info(f"Using standard multi-pass erasure for disk ID: {disk_id}")
+            if log_func:
+                log_func(f"Using standard multi-pass erasure for disk ID: {disk_id}")
+            erase_result = erase_disk_hdd(disk, passes, log_func=log_func)
         
         log_info(f"Erase completed on disk ID: {disk_id}")
         if log_func:
