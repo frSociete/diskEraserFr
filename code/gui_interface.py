@@ -485,7 +485,7 @@ class DiskEraserGUI:
             # Wait for the OS to recognize the new partition
             self.update_gui_log("Waiting for partition to be recognized...")
             log_info("Waiting for partition to be recognized...")
-            time.sleep(5)
+            time.sleep(10)
             
             # Format the disk
             self.status_var.set(f"Formatting {disk_serial}...")
