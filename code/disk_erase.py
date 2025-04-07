@@ -356,3 +356,4 @@ def erase_disk_crypto(device: str, log_func=None) -> str:
                 subprocess.run(["shred", "-u", "-z", "-n", "3", "/tmp/temp_keyfile"], check=False)
         except Exception as e:
             logging.error(f"Error during cleanup: {e}")
+
