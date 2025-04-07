@@ -494,7 +494,7 @@ class DiskEraserGUI:
             format_disk(disk_name, fs_choice)
             
             # Log the erase operation with the stable disk identifier, method, and filesystem
-            method_for_log = "crypto" if erase_method == "crypto" else f"overwrite-{passes}"
+            method_for_log = "Cryptographic Erasure" if erase_method == "crypto" else f"Overwrite-{passes}"
             log_erase_operation(disk_serial, fs_choice, method=method_for_log)
             
             self.update_gui_log(f"Completed operations on disk ID: {disk_serial}")
