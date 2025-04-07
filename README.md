@@ -1,6 +1,12 @@
-# Disk Eraser - Secure Disk Wiping and Formatting Tool 🗑️💽
+# Disk Eraser - Secure Disk Wiping and Formatting Tool 💽
 
-**Disk Eraser** 🔒 is a tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, ensuring thorough data wiping with multiple overwrite passes.
+<div style="display: flex; align-items: center;">
+  <img src="./background" alt="Logo" width="120" style="margin-right: 20px;">
+  <p>
+    <b> Disk Eraser </b> is a tool for securely erasing data from hard drives or USB keys, while also providing the option to format the disk with a chosen file system (EXT4, NTFS, or VFAT). It can erase multiple disks in parallel, ensuring thorough data wiping with multiple overwrite passes.
+  </p>
+</div>
+<br>
 
 > ⚠️ **IMPORTANT: SSD COMPATIBILITY WARNING** ⚠️
 > 
