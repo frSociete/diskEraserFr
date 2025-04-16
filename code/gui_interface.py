@@ -4,13 +4,13 @@ import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 from subprocess import CalledProcessError, SubprocessError
-from disk_erase import erase_disk_hdd, erase_disk_crypto, get_disk_serial, is_ssd
+from disk_erase import get_disk_serial, is_ssd
 from disk_partition import partition_disk
 from disk_format import format_disk
 from utils import list_disks
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from log_handler import log_info, log_error, log_erase_operation, blank
-from disk_operations import get_active_disk
+from disk_operations import get_active_disk, process_disk
 import threading
 
 class DiskEraserGUI:
@@ -153,13 +153,22 @@ class DiskEraserGUI:
     
     def update_method_options(self):
         """Update UI based on the selected erasure method"""
-        if self.erase_method_var.get() == "crypto":
-            # Hide passes frame for cryptographic method
-            self.passes_frame.pack_forget()
-        else:
-            # Show passes frame for standard overwrite method
+        method = self.erase_method_var.get()
+        
+        # Always keep passes frame visible
+        if not self.passes_frame.winfo_ismapped():
             self.passes_frame.pack(fill=tk.X, pady=10, padx=5)
-    
+        
+        # Find the entry widget within passes_frame and update its state
+        for child in self.passes_frame.winfo_children():
+            if isinstance(child, ttk.Entry):
+                if method == "crypto":
+                    # Disable the entry for cryptographic method
+                    child.configure(state="disabled")
+                else:
+                    # Enable for standard overwrite method
+                    child.configure(state="normal")
+        
     def exit_application(self):
         """Log and close the application when Exit is clicked"""
         exit_message = "Application closed by user via Exit button"
@@ -406,7 +415,7 @@ class DiskEraserGUI:
             self.disk_progress = {disk: 0 for disk in disks}
             
             # Submit all disk tasks
-            futures = {executor.submit(self.process_single_disk, disk, fs_choice, passes, erase_method): disk for disk in disks}
+            futures = {executor.submit(self.process_disk_wrapper, disk, fs_choice, passes, erase_method): disk for disk in disks}
             
             # Process results as they complete
             for future in as_completed(futures):
@@ -428,104 +437,32 @@ class DiskEraserGUI:
         self.status_var.set("Erasure process completed")
         messagebox.showinfo("Complete", "Disk erasure operation has completed!")
     
-    def process_single_disk(self, disk, fs_choice, passes, erase_method):
-        # Get the stable disk identifier before erasure
+    def process_disk_wrapper(self, disk, fs_choice, passes, erase_method):
+        """
+        Wrapper for process_disk from disk_operations.py that updates GUI status
+        """
+        # Extract disk name (remove /dev/)
         disk_name = disk.replace('/dev/', '')
+        
+        # Get the disk ID for status updates
         try:
-            # Get disk serial/identifier
-            disk_serial = get_disk_serial(disk_name)
-            self.update_gui_log(f"Processing disk identifier: {disk_serial}")
-            log_info(f"Processing disk identifier: {disk_serial}")
-        except (SubprocessError, FileNotFoundError) as e:
-            error_msg = f"Could not get disk identifier: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            disk_serial = f"unknown_{disk_name}"
-        except KeyboardInterrupt:
-            error_msg = "Disk identification interrupted by user"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            raise
+            disk_id = get_disk_serial(disk_name)
+            self.status_var.set(f"Erasing {disk_id}...")
+        except Exception:
+            self.status_var.set(f"Erasing {disk_name}...")
+        
+        # Define GUI log callback for process_disk
+        def gui_log_callback(message):
+            self.update_gui_log(message)
         
         try:
-            method_str = "cryptographic erasure" if erase_method == "crypto" else f"{passes}-pass overwrite"
-            self.status_var.set(f"Erasing {disk_serial}...")
-            self.update_gui_log(f"Starting secure erase using {method_str} on disk ID: {disk_serial}")
-            log_info(f"Starting secure erase using {method_str} on disk ID: {disk_serial}")
+            # Call process_disk from disk_operations
+            use_crypto = (erase_method == "crypto")
+            process_disk(disk_name, fs_choice, passes, use_crypto, log_func=gui_log_callback)
             
-            # Check if disk is SSD and log a warning for overwrite method
-            if erase_method == "overwrite" and is_ssd(disk_name):
-                self.update_gui_log(f"WARNING: {disk_serial} is an SSD. Multiple-pass erasure may not securely erase all data.")
-                log_info(f"WARNING: {disk_serial} is an SSD. Multiple-pass erasure may not securely erase all data.")
-            
-            # Use the appropriate erasure method
-            if erase_method == "crypto":
-                # Use cryptographic erasure
-                erase_result = erase_disk_crypto(
-                    disk_name, 
-                    log_func=lambda msg: self.update_gui_log(f"Crypto progress: {msg}")
-                )
-            else:
-                # Use standard overwrite method
-                erase_result = erase_disk_hdd(
-                    disk_name, 
-                    passes, 
-                    log_func=lambda msg: self.update_gui_log(f"Shred progress: {msg}")
-                )
-            
-            self.update_gui_log(f"Erase completed on disk ID: {disk_serial}")
-            log_info(f"Erase completed on disk ID: {disk_serial}")
-            
-            # Partition the disk
-            self.status_var.set(f"Partitioning {disk_serial}...")
-            self.update_gui_log(f"Creating partition on disk ID: {disk_serial}")
-            log_info(f"Creating partition on disk ID: {disk_serial}")
-            partition_disk(disk_name)
-            
-            # Wait for the OS to recognize the new partition
-            self.update_gui_log("Waiting for partition to be recognized...")
-            log_info("Waiting for partition to be recognized...")
-            time.sleep(10)
-            
-            # Format the disk
-            self.status_var.set(f"Formatting {disk_serial}...")
-            self.update_gui_log(f"Formatting disk ID: {disk_serial} with {fs_choice}")
-            log_info(f"Formatting disk ID: {disk_serial} with {fs_choice}")
-            format_disk(disk_name, fs_choice)
-            
-            # Log the erase operation with the stable disk identifier, method, and filesystem
-            method_for_log = "Cryptographic Erasure" if erase_method == "crypto" else f"Overwrite-{passes}"
-            log_erase_operation(disk_serial, fs_choice, method=method_for_log)
-            
-            self.update_gui_log(f"Completed operations on disk ID: {disk_serial}")
-            log_info(f"Completed operations on disk ID: {disk_serial}")
-            blank()
-
-        except CalledProcessError as e:
-            error_msg = f"Error processing disk ID: {disk_serial}: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            raise
-        except FileNotFoundError as e:
-            error_msg = f"Command not found: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            raise
-        except PermissionError as e:
-            error_msg = f"Permission denied: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            raise
-        except OSError as e:
-            error_msg = f"OS error: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            raise
-        except KeyboardInterrupt:
-            error_msg = "Operation interrupted by user"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            raise
+        except Exception as e:
+            # Forward any exceptions to the caller
+            raise e
     
     def update_progress(self, value):
         self.progress_var.set(value)
