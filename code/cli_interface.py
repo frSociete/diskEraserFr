@@ -4,10 +4,9 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from subprocess import CalledProcessError, SubprocessError
-
 from disk_erase import get_disk_serial, is_ssd
-from disk_operations import get_active_disk, process_disk  # Import process_disk from disk_operations
-from utils import list_disks, choose_filesystem
+from disk_operations import get_active_disk, process_disk
+from utils import get_disk_list, choose_filesystem
 from log_handler import log_info, log_error
 
 def print_disk_details(disk):
@@ -15,9 +14,16 @@ def print_disk_details(disk):
     try:
         disk_id = get_disk_serial(disk)
         is_disk_ssd = is_ssd(disk)
-        active_disks = get_active_disk()        
+        active_disks = get_active_disk()
         
-        # Fix: Check if any active disk name is a substring of this disk name
+        # Get disk size from get_disk_list function
+        disk_size = "Unknown"
+        available_disks = get_disk_list()
+        for available_disk in available_disks:
+            if available_disk["device"] == f"/dev/{disk}":
+                disk_size = available_disk["size"]
+                break
+        
         is_active = False
         if active_disks:
             for active_disk in active_disks:
@@ -27,6 +33,7 @@ def print_disk_details(disk):
         
         print(f"Disk: /dev/{disk}")
         print(f"  Serial/ID: {disk_id}")
+        print(f"  Size: {disk_size}")
         print(f"  Type: {'SSD' if is_disk_ssd else 'HDD'}")
         print(f"  Status: {'ACTIVE SYSTEM DISK - DANGER!' if is_active else 'Safe to erase'}")
         
@@ -52,29 +59,15 @@ def select_disks() -> list[str]:
     Let the user select disks to erase from the command line, with detailed information.
     """
     try:
-        disk_list = list_disks()
-        if not disk_list:
-            print("No disks detected.")
-            return []
-        
-        print("\n=== Available Disks ===")
-        print(disk_list)
-        print("\n=== Detailed Disk Information ===")
-        
-        available_disks = []
-        for line in disk_list.strip().split('\n'):
-            if not line.strip():
-                continue
-                
-            parts = line.strip().split(maxsplit=3)
-            if len(parts) >= 1:
-                available_disks.append(parts[0])
-        
-        # Print detailed information for each disk
-        for disk in available_disks:
+
+        available_disks = get_disk_list()
+        disk_names = [disk["device"].replace("/dev/", "") for disk in available_disks]
+
+        # Then iterate over disk_names
+        for disk in disk_names:
             print("\n" + "-" * 50)
             print_disk_details(disk)
-        
+            
         print("\n" + "-" * 50)
         print("\nWARNING: This tool will COMPLETELY ERASE selected disks. ALL DATA WILL BE LOST!")
         print("WARNING: If any of these disks are SSDs, using this tool with multiple passes may damage the SSD.")

@@ -24,7 +24,6 @@ def list_disks() -> str:
     Get a raw string output of available disks using lsblk command.
     Returns the output of the lsblk command or an empty string if no disks found.
     """
-    print("List of available disks:")
     try:
         # Use more explicit column specification with -o option and -n to skip header
         output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE,MODEL", "-n"])
