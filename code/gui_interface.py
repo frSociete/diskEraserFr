@@ -22,6 +22,7 @@ class DiskEraserGUI:
         self.filesystem_var = tk.StringVar(value="ext4")
         self.passes_var = tk.StringVar(value="5")
         self.erase_method_var = tk.StringVar(value="overwrite")  # Default to overwrite method
+        self.crypto_fill_var = tk.StringVar(value="random")  # Default fill method for crypto erasure
         self.disks = []
         self.disk_progress = {}
         self.active_disk = get_active_disk()
@@ -102,6 +103,15 @@ class DiskEraserGUI:
         passes_entry = ttk.Entry(self.passes_frame, textvariable=self.passes_var, width=5)
         passes_entry.pack(side=tk.LEFT, padx=5)
         
+        # Crypto fill method options (for crypto method)
+        self.crypto_fill_frame = ttk.LabelFrame(options_frame, text="Fill Method (Crypto)")
+        # Initially hidden, will be shown when crypto method is selected
+        
+        fill_methods = [("Random Data", "random"), ("Zero Data", "zero")]
+        for text, value in fill_methods:
+            rb = ttk.Radiobutton(self.crypto_fill_frame, text=text, value=value, variable=self.crypto_fill_var)
+            rb.pack(anchor="w", padx=20, pady=2)
+        
         # Filesystem options
         fs_label = ttk.Label(options_frame, text="Choose Filesystem:")
         fs_label.pack(anchor="w", pady=(10, 5))
@@ -148,25 +158,36 @@ class DiskEraserGUI:
         
         # Protocol for window close event
         self.root.protocol("WM_DELETE_WINDOW", self.exit_application)
+        
+        # Initial method options update
+        self.update_method_options()
     
     def update_method_options(self):
         """Update UI based on the selected erasure method"""
         method = self.erase_method_var.get()
-        
-        # Always keep passes frame visible
-        if not self.passes_frame.winfo_ismapped():
-            self.passes_frame.pack(fill=tk.X, pady=10, padx=5)
-        
-        # Find the entry widget within passes_frame and update its state
+
+        # Always show the crypto fill options frame
+        self.crypto_fill_frame.pack(fill=tk.X, pady=10, padx=5, after=self.passes_frame)
+
+        # Enable or disable widgets inside crypto_fill_frame
+        for child in self.crypto_fill_frame.winfo_children():
+            try:
+                if method == "crypto":
+                    child.configure(state="normal")
+                else:
+                    child.configure(state="disabled")
+            except tk.TclError:
+                # Some widgets (like labels) may not support 'state'
+                pass
+
+        # Enable or disable passes entry
         for child in self.passes_frame.winfo_children():
             if isinstance(child, ttk.Entry):
                 if method == "crypto":
-                    # Disable the entry for cryptographic method
                     child.configure(state="disabled")
                 else:
-                    # Enable for standard overwrite method
                     child.configure(state="normal")
-        
+
     def exit_application(self):
         """Log and close the application when Exit is clicked"""
         exit_message = "Application closed by user via Exit button"
