@@ -31,6 +31,7 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
                 log_func(f"WARNING: {disk_id} is an SSD. Multiple-pass erasure may not securely erase all data.")
         
         # Erase disk using selected method
+        method_str = "Cryptographic erasure" if use_crypto else f"{passes} overwriting passes"
         if use_crypto:
             log_info(f"Using cryptographic erasure for disk ID: {disk_id}")
             if log_func:
@@ -64,7 +65,7 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
         
         format_disk(disk, fs_choice)
         
-        log_erase_operation(disk_id, fs_choice)
+        log_erase_operation(disk_id, fs_choice, method_str)
         
         log_info(f"Completed operations on disk ID: {disk_id}")
         if log_func:
