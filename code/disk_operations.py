@@ -7,7 +7,8 @@ from disk_format import format_disk
 from log_handler import log_info, log_error, log_erase_operation, blank
 from utils import run_command
 
-def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = False, log_func=None) -> None:
+# Now let's update the process_disk function in disk_operations.py
+def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = False, crypto_fill: str = "random", log_func=None) -> None:
     """
     Process a single disk: erase, partition, and format it.
     
@@ -16,6 +17,7 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
         fs_choice: Filesystem choice for formatting
         passes: Number of passes for secure erasure
         use_crypto: Whether to use cryptographic erasure method
+        crypto_fill: Fill method for crypto erasure ('random' or 'zero')
         log_func: Optional function for logging progress
     """
     try:
@@ -31,13 +33,14 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
                 log_func(f"WARNING: {disk_id} is an SSD. Multiple-pass erasure may not securely erase all data.")
         
         # Erase disk using selected method
-        method_str = "Cryptographic erasure" if use_crypto else f"{passes} overwriting passes"
         if use_crypto:
-            log_info(f"Using cryptographic erasure for disk ID: {disk_id}")
+            method_str = f"Cryptographic erasure with {crypto_fill} filling"
+            log_info(f"Using cryptographic erasure ({crypto_fill} fill) for disk ID: {disk_id}")
             if log_func:
-                log_func(f"Using cryptographic erasure for disk ID: {disk_id}")
-            erase_result = erase_disk_crypto(disk, log_func=log_func)
+                log_func(f"Using cryptographic erasure ({crypto_fill} fill) for disk ID: {disk_id}")
+            erase_result = erase_disk_crypto(disk, filling_method=crypto_fill, log_func=log_func)
         else:
+            method_str = f"{passes} overwriting passes"
             log_info(f"Using standard multi-pass erasure for disk ID: {disk_id}")
             if log_func:
                 log_func(f"Using standard multi-pass erasure for disk ID: {disk_id}")
