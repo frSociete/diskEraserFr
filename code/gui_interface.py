@@ -5,11 +5,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from subprocess import CalledProcessError, SubprocessError
 from disk_erase import get_disk_serial, is_ssd
-from disk_partition import partition_disk
-from disk_format import format_disk
-from utils import list_disks
+from utils import get_disk_list
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from log_handler import log_info, log_error, log_erase_operation, blank
+from log_handler import log_info, log_error, blank
 from disk_operations import get_active_disk, process_disk
 import threading
 
@@ -190,14 +188,15 @@ class DiskEraserGUI:
         
         self.disk_vars = {}
         
-        # Get list of disks
-        self.disks = self._get_disks()
+        # Get list of disks using the common function
+        self.disks = get_disk_list()
         
         if not self.disks:
             no_disk_label = ttk.Label(self.scrollable_disk_frame, text="No disks found")
             no_disk_label.pack(pady=10)
             self.disclaimer_var.set("")
             self.ssd_disclaimer_var.set("")
+            self.update_gui_log("No disks found.")
             return
             
         # Set disclaimer if we found an active disk
@@ -249,64 +248,6 @@ class DiskEraserGUI:
             )
             disk_label.pack(side=tk.LEFT, padx=5)
     
-    def _get_disks(self):
-        """
-        Get list of available disks using the list_disks utility function.
-        """
-        try:
-            # Use list_disks function from utils.py
-            output = list_disks()
-            
-            if not output:
-                self.update_gui_log("No disks found.")
-                log_info("No disks found.")
-                return []
-            
-            # Parse the output from lsblk command
-            disks = []
-            for line in output.strip().split('\n'):
-                if not line.strip():
-                    continue
-                    
-                # Split the line but preserve the model name which might contain spaces
-                parts = line.strip().split(maxsplit=3)
-                device = parts[0]
-                
-                # Ensure we have at least NAME and SIZE
-                if len(parts) >= 2:
-                    size = parts[1]
-                    
-                    # MODEL may be missing, set to "Unknown" if it is
-                    model = parts[3] if len(parts) > 3 else "Unknown"
-                    
-                    disks.append({
-                        "device": f"/dev/{device}",
-                        "size": size,
-                        "model": model
-                    })
-            
-            return disks
-        except FileNotFoundError as e:
-            error_msg = f"Error: Command not found: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            return []
-        except CalledProcessError as e:
-            error_msg = f"Error executing command: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            return []
-        except (IndexError, ValueError) as e:
-            error_msg = f"Error parsing disk information: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            return []
-        except KeyboardInterrupt:
-            error_msg = "Disk listing interrupted by user"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            return []
-
     def start_erasure(self):
         # Get selected disks
         selected_disks = [disk for disk, var in self.disk_vars.items() if var.get()]
