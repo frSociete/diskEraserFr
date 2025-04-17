@@ -196,6 +196,7 @@ def run_cli_mode(args):
         print("=" * 60)
         
         # First, list disks and select disks to erase
+        print("List of available disks: ")
         disks = select_disks()
         if not disks:
             print("No disks selected. Exiting.")
