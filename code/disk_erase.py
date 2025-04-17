@@ -148,7 +148,7 @@ def erase_disk_hdd(device: str, passes: int, log_func=None) -> str:
         print(f"\n{error_message}")
         sys.exit(130)
 
-def erase_disk_crypto(device: str, log_func=None) -> str:
+def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None) -> bool:
     """
     Securely erase a disk using cryptographic erasure: encrypt the entire drive
     with a random key, then discard the key making data unrecoverable.
@@ -244,15 +244,28 @@ def erase_disk_crypto(device: str, log_func=None) -> str:
             log_func(fill_data_msg)
             
         # Fill with zeros (faster) or random data (more secure but slower)
+        # Using random but c
         # Using dd with status=progress to show progress
-        fill_process = subprocess.Popen(
-            ["dd", "if=/dev/urandom", f"of=/dev/mapper/temp_{device}", 
-             "bs=4M", "status=progress"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True
-        )
-        
+        if filling_method == "random":
+            if log_func:
+                log_func("Filling encrypted device with random data...")
+                fill_process = subprocess.Popen(
+                    ["dd", "if=/dev/urandom", f"of=/dev/mapper/temp_{device}", 
+                    "bs=4M", "status=progress"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    universal_newlines=True
+                )
+        else:  # "zero" filling method
+            if log_func:
+                log_func("Filling encrypted device with zeros...")
+                fill_process = subprocess.Popen(
+                    ["dd", "if=/dev/zero", f"of=/dev/mapper/temp_{device}", 
+                    "bs=4M", "status=progress"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    universal_newlines=True
+                )
         # Read output in real-time to show progress
         while True:
             try:
