@@ -410,7 +410,17 @@ class DiskEraserGUI:
         try:
             disk_id = get_disk_serial(disk_name)
             self.status_var.set(f"Erasing {disk_id}...")
-        except Exception:
+        except (CalledProcessError, SubprocessError) as e:
+            self.update_gui_log(f"Error getting disk serial: {str(e)}")
+            self.status_var.set(f"Erasing {disk_name}...")
+        except FileNotFoundError as e:
+            self.update_gui_log(f"Required command not found: {str(e)}")
+            self.status_var.set(f"Erasing {disk_name}...")
+        except PermissionError as e:
+            self.update_gui_log(f"Permission error: {str(e)}")
+            self.status_var.set(f"Erasing {disk_name}...")
+        except OSError as e:
+            self.update_gui_log(f"OS error: {str(e)}")
             self.status_var.set(f"Erasing {disk_name}...")
         
         # Define GUI log callback for process_disk
@@ -422,9 +432,21 @@ class DiskEraserGUI:
             use_crypto = (erase_method == "crypto")
             process_disk(disk_name, fs_choice, passes, use_crypto, log_func=gui_log_callback)
             
-        except Exception as e:
-            # Forward any exceptions to the caller
-            raise e
+        except CalledProcessError as e:
+            self.update_gui_log(f"Process error: {str(e)}")
+            raise
+        except FileNotFoundError as e:
+            self.update_gui_log(f"Required command not found: {str(e)}")
+            raise
+        except PermissionError as e:
+            self.update_gui_log(f"Permission error: {str(e)}")
+            raise
+        except OSError as e:
+            self.update_gui_log(f"OS error: {str(e)}")
+            raise
+        except KeyboardInterrupt:
+            self.update_gui_log("Operation interrupted by user")
+            raise
     
     def update_progress(self, value):
         self.progress_var.set(value)
