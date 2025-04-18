@@ -10,21 +10,22 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from log_handler import log_info, log_error, blank
 from disk_operations import get_active_disk, process_disk
 import threading
+from typing import Optional, Dict, List, Callable, Any
 
 class DiskEraserGUI:
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("Secure Disk Eraser")
         self.root.geometry("600x500")
         # Set fullscreen mode to True
         self.root.attributes("-fullscreen", True)
-        self.disk_vars = {}
+        self.disk_vars: Dict[str, tk.BooleanVar] = {}
         self.filesystem_var = tk.StringVar(value="ext4")
         self.passes_var = tk.StringVar(value="5")
         self.erase_method_var = tk.StringVar(value="overwrite")  # Default to overwrite method
         self.crypto_fill_var = tk.StringVar(value="random")  # Default fill method for crypto erasure
-        self.disks = []
-        self.disk_progress = {}
+        self.disks: List[Dict[str, str]] = []
+        self.disk_progress: Dict[str, float] = {}
         self.active_disk = get_active_disk()
         
         # Check for root privileges
@@ -36,7 +37,7 @@ class DiskEraserGUI:
         self.create_widgets()
         self.refresh_disks()
     
-    def create_widgets(self):
+    def create_widgets(self) -> None:
         # Main frame
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -162,7 +163,7 @@ class DiskEraserGUI:
         # Initial method options update
         self.update_method_options()
     
-    def update_method_options(self):
+    def update_method_options(self) -> None:
         """Update UI based on the selected erasure method"""
         method = self.erase_method_var.get()
 
@@ -188,7 +189,7 @@ class DiskEraserGUI:
                 else:
                     child.configure(state="normal")
 
-    def exit_application(self):
+    def exit_application(self) -> None:
         """Log and close the application when Exit is clicked"""
         exit_message = "Application closed by user via Exit button"
         log_info(exit_message)
@@ -196,13 +197,13 @@ class DiskEraserGUI:
         blank()  # Add separator in log file
         self.root.destroy()
     
-    def toggle_fullscreen(self):
+    def toggle_fullscreen(self) -> None:
         """Toggle fullscreen mode"""
         is_fullscreen = self.root.attributes("-fullscreen")
         self.root.attributes("-fullscreen", not is_fullscreen)
     
         
-    def refresh_disks(self):
+    def refresh_disks(self) -> None:
         # Clear existing disk checkboxes
         for widget in self.scrollable_disk_frame.winfo_children():
             widget.destroy()
@@ -269,7 +270,7 @@ class DiskEraserGUI:
             )
             disk_label.pack(side=tk.LEFT, padx=5)
     
-    def start_erasure(self):
+    def start_erasure(self) -> None:
         # Get selected disks
         selected_disks = [disk for disk, var in self.disk_vars.items() if var.get()]
         
@@ -362,7 +363,7 @@ class DiskEraserGUI:
         self.status_var.set("Starting erasure process...")
         threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes, erase_method), daemon=True).start()
     
-    def progress_state(self, disks, fs_choice, passes, erase_method):
+    def progress_state(self, disks: List[str], fs_choice: str, passes: int, erase_method: str) -> None:
         method_str = "cryptographic erasure" if erase_method == "crypto" else f"standard {passes}-pass overwrite"
         self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
         log_info(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
@@ -399,7 +400,7 @@ class DiskEraserGUI:
         self.status_var.set("Erasure process completed")
         messagebox.showinfo("Complete", "Disk erasure operation has completed!")
     
-    def process_disk_wrapper(self, disk, fs_choice, passes, erase_method):
+    def process_disk_wrapper(self, disk: str, fs_choice: str, passes: int, erase_method: str) -> None:
         """
         Wrapper for process_disk from disk_operations.py that updates GUI status
         """
@@ -424,7 +425,7 @@ class DiskEraserGUI:
             self.status_var.set(f"Erasing {disk_name}...")
         
         # Define GUI log callback for process_disk
-        def gui_log_callback(message):
+        def gui_log_callback(message: str) -> None:
             self.update_gui_log(message)
         
         try:
@@ -448,11 +449,11 @@ class DiskEraserGUI:
             self.update_gui_log("Operation interrupted by user")
             raise
     
-    def update_progress(self, value):
+    def update_progress(self, value: float) -> None:
         self.progress_var.set(value)
         self.root.update_idletasks()
     
-    def update_gui_log(self, message):
+    def update_gui_log(self, message: str) -> None:
         """Update only the GUI log window with a message."""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         log_message = f"[{timestamp}] {message}\n"
@@ -461,7 +462,7 @@ class DiskEraserGUI:
         self.log_text.insert(tk.END, log_message)
         self.log_text.see(tk.END)
 
-def run_gui_mode():
+def run_gui_mode() -> None:
     """Run the GUI version"""
     root = tk.Tk()
     app = DiskEraserGUI(root)
