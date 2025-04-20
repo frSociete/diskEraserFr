@@ -365,7 +365,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 subprocess.run(["cryptsetup", "close", f"temp_{device}"], check=False)
                 
             # Remove the key file if it still exists
-            if Path.exists("/tmp/temp_keyfile"):
+            if Path("/tmp/temp_keyfile").exists():
                 subprocess.run(["shred", "-u", "-z", "-n", "3", "/tmp/temp_keyfile"], check=False)
         except subprocess.SubprocessError as e:
             logging.error(f"Subprocess error during cleanup: {e}")
