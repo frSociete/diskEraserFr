@@ -157,7 +157,7 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, zero_fill=False)
         
         # Process the disk using the imported function with crypto flag and filling method
         filling_method = "zero" if zero_fill else "random"
-        process_disk(disk, fs_choice, passes, use_crypto, log_func=log_progress, filling_method=filling_method)
+        process_disk(disk, fs_choice, passes, use_crypto, log_func=log_progress, crypto_fill=filling_method)
         
         print(f"Successfully completed all operations on disk {disk_id}")
         return True
