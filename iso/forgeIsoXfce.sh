@@ -62,6 +62,8 @@ tasksel
 tasksel-data
 console-setup
 keyboard-configuration
+cryptsetup
+dmsetup
 EOF
 
 # Set system locale and keyboard layout to French AZERTY
