@@ -86,7 +86,7 @@ sudo diskeraser --cli     # CLI mode
    ```bash
    cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
    ```
-   Or download pre-built: [Disk Eraser ISO v4.0](https://archive.org/details/diskEraser-v5)
+   Or download pre-built: [Disk Eraser ISO v4.0](https://archive.org/details/diskEraser-V5)
 
 2. **Flash to USB**:
    ```bash
