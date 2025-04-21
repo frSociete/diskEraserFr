@@ -4,27 +4,28 @@ import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 from subprocess import CalledProcessError, SubprocessError
-from disk_erase import erase_disk_hdd, get_disk_serial, is_ssd
-from disk_partition import partition_disk
-from disk_format import format_disk
-from utils import list_disks
+from disk_erase import get_disk_serial, is_ssd
+from utils import get_disk_list
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from log_handler import log_info, log_error, log_erase_operation, blank
-from disk_operations import get_active_disk
+from log_handler import log_info, log_error, blank
+from disk_operations import get_active_disk, process_disk
 import threading
+from typing import Optional, Dict, List, Callable, Any
 
 class DiskEraserGUI:
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("Secure Disk Eraser")
         self.root.geometry("600x500")
         # Set fullscreen mode to True
         self.root.attributes("-fullscreen", True)
-        self.disk_vars = {}
+        self.disk_vars: Dict[str, tk.BooleanVar] = {}
         self.filesystem_var = tk.StringVar(value="ext4")
         self.passes_var = tk.StringVar(value="5")
-        self.disks = []
-        self.disk_progress = {}
+        self.erase_method_var = tk.StringVar(value="overwrite")  # Default to overwrite method
+        self.crypto_fill_var = tk.StringVar(value="random")  # Default fill method for crypto erasure
+        self.disks: List[Dict[str, str]] = []
+        self.disk_progress: Dict[str, float] = {}
         self.active_disk = get_active_disk()
         
         # Check for root privileges
@@ -36,7 +37,7 @@ class DiskEraserGUI:
         self.create_widgets()
         self.refresh_disks()
     
-    def create_widgets(self):
+    def create_widgets(self) -> None:
         # Main frame
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -83,6 +84,35 @@ class DiskEraserGUI:
         options_frame = ttk.LabelFrame(main_frame, text="Options")
         options_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5, pady=5)
         
+        # Erasure method options
+        method_label = ttk.Label(options_frame, text="Erasure Method:")
+        method_label.pack(anchor="w", pady=(10, 5))
+        
+        methods = [("Standard Overwrite", "overwrite"), ("Cryptographic Erasure", "crypto")]
+        for text, value in methods:
+            rb = ttk.Radiobutton(options_frame, text=text, value=value, variable=self.erase_method_var, 
+                                command=self.update_method_options)
+            rb.pack(anchor="w", padx=20)
+        
+        # Passes (for overwrite method)
+        self.passes_frame = ttk.Frame(options_frame)
+        self.passes_frame.pack(fill=tk.X, pady=10, padx=5)
+        
+        passes_label = ttk.Label(self.passes_frame, text="Number of passes:")
+        passes_label.pack(side=tk.LEFT, padx=5)
+        
+        passes_entry = ttk.Entry(self.passes_frame, textvariable=self.passes_var, width=5)
+        passes_entry.pack(side=tk.LEFT, padx=5)
+        
+        # Crypto fill method options (for crypto method)
+        self.crypto_fill_frame = ttk.LabelFrame(options_frame, text="Fill Method (Crypto)")
+        # Initially hidden, will be shown when crypto method is selected
+        
+        fill_methods = [("Random Data", "random"), ("Zero Data", "zero")]
+        for text, value in fill_methods:
+            rb = ttk.Radiobutton(self.crypto_fill_frame, text=text, value=value, variable=self.crypto_fill_var)
+            rb.pack(anchor="w", padx=20, pady=2)
+        
         # Filesystem options
         fs_label = ttk.Label(options_frame, text="Choose Filesystem:")
         fs_label.pack(anchor="w", pady=(10, 5))
@@ -91,16 +121,6 @@ class DiskEraserGUI:
         for text, value in filesystems:
             rb = ttk.Radiobutton(options_frame, text=text, value=value, variable=self.filesystem_var)
             rb.pack(anchor="w", padx=20)
-        
-        # Passes
-        passes_frame = ttk.Frame(options_frame)
-        passes_frame.pack(fill=tk.X, pady=10, padx=5)
-        
-        passes_label = ttk.Label(passes_frame, text="Number of passes:")
-        passes_label.pack(side=tk.LEFT, padx=5)
-        
-        passes_entry = ttk.Entry(passes_frame, textvariable=self.passes_var, width=5)
-        passes_entry.pack(side=tk.LEFT, padx=5)
         
         # Exit fullscreen button
         exit_button = ttk.Button(options_frame, text="Exit Fullscreen", command=self.toggle_fullscreen)
@@ -139,8 +159,37 @@ class DiskEraserGUI:
         
         # Protocol for window close event
         self.root.protocol("WM_DELETE_WINDOW", self.exit_application)
+        
+        # Initial method options update
+        self.update_method_options()
     
-    def exit_application(self):
+    def update_method_options(self) -> None:
+        """Update UI based on the selected erasure method"""
+        method = self.erase_method_var.get()
+
+        # Always show the crypto fill options frame
+        self.crypto_fill_frame.pack(fill=tk.X, pady=10, padx=5, after=self.passes_frame)
+
+        # Enable or disable widgets inside crypto_fill_frame
+        for child in self.crypto_fill_frame.winfo_children():
+            try:
+                if method == "crypto":
+                    child.configure(state="normal")
+                else:
+                    child.configure(state="disabled")
+            except tk.TclError:
+                # Some widgets (like labels) may not support 'state'
+                pass
+
+        # Enable or disable passes entry
+        for child in self.passes_frame.winfo_children():
+            if isinstance(child, ttk.Entry):
+                if method == "crypto":
+                    child.configure(state="disabled")
+                else:
+                    child.configure(state="normal")
+
+    def exit_application(self) -> None:
         """Log and close the application when Exit is clicked"""
         exit_message = "Application closed by user via Exit button"
         log_info(exit_message)
@@ -148,27 +197,28 @@ class DiskEraserGUI:
         blank()  # Add separator in log file
         self.root.destroy()
     
-    def toggle_fullscreen(self):
+    def toggle_fullscreen(self) -> None:
         """Toggle fullscreen mode"""
         is_fullscreen = self.root.attributes("-fullscreen")
         self.root.attributes("-fullscreen", not is_fullscreen)
     
         
-    def refresh_disks(self):
+    def refresh_disks(self) -> None:
         # Clear existing disk checkboxes
         for widget in self.scrollable_disk_frame.winfo_children():
             widget.destroy()
         
         self.disk_vars = {}
         
-        # Get list of disks
-        self.disks = self._get_disks()
+        # Get list of disks using the common function
+        self.disks = get_disk_list()
         
         if not self.disks:
             no_disk_label = ttk.Label(self.scrollable_disk_frame, text="No disks found")
             no_disk_label.pack(pady=10)
             self.disclaimer_var.set("")
             self.ssd_disclaimer_var.set("")
+            self.update_gui_log("No disks found.")
             return
             
         # Set disclaimer if we found an active disk
@@ -207,7 +257,7 @@ class DiskEraserGUI:
             is_device_ssd = is_ssd(device_name)
             ssd_indicator = " (SSD)" if is_device_ssd else " (HDD)"
             
-# Set the text color to red if this is the active disk
+            # Set the text color to red if this is the active disk
             is_active = self.active_disk and any(disk in device_name for disk in self.active_disk)
 
             text_color = "red" if is_active else "red" if is_device_ssd else "black"
@@ -220,65 +270,7 @@ class DiskEraserGUI:
             )
             disk_label.pack(side=tk.LEFT, padx=5)
     
-    def _get_disks(self):
-        """
-        Get list of available disks using the list_disks utility function.
-        """
-        try:
-            # Use list_disks function from utils.py
-            output = list_disks()
-            
-            if not output:
-                self.update_gui_log("No disks found.")
-                log_info("No disks found.")
-                return []
-            
-            # Parse the output from lsblk command
-            disks = []
-            for line in output.strip().split('\n'):
-                if not line.strip():
-                    continue
-                    
-                # Split the line but preserve the model name which might contain spaces
-                parts = line.strip().split(maxsplit=3)
-                device = parts[0]
-                
-                # Ensure we have at least NAME and SIZE
-                if len(parts) >= 2:
-                    size = parts[1]
-                    
-                    # MODEL may be missing, set to "Unknown" if it is
-                    model = parts[3] if len(parts) > 3 else "Unknown"
-                    
-                    disks.append({
-                        "device": f"/dev/{device}",
-                        "size": size,
-                        "model": model
-                    })
-            
-            return disks
-        except FileNotFoundError as e:
-            error_msg = f"Error: Command not found: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            return []
-        except CalledProcessError as e:
-            error_msg = f"Error executing command: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            return []
-        except (IndexError, ValueError) as e:
-            error_msg = f"Error parsing disk information: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            return []
-        except KeyboardInterrupt:
-            error_msg = "Disk listing interrupted by user"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            return []
-
-    def start_erasure(self):
+    def start_erasure(self) -> None:
         # Get selected disks
         selected_disks = [disk for disk, var in self.disk_vars.items() if var.get()]
         
@@ -303,25 +295,29 @@ class DiskEraserGUI:
                                       icon="warning"):
                 return
         
-        # Check if any SSDs are selected and show a warning
+        # Get erasure method
+        erase_method = self.erase_method_var.get()
+        
+        # Check if any SSDs are selected and show a warning for overwrite method
         ssd_selected = False
-        for disk in selected_disks:
-            disk_name = disk.replace('/dev/', '')
-            if is_ssd(disk_name):
-                ssd_selected = True
-                break
-                
-        if ssd_selected:
-            if not messagebox.askyesno("WARNING - SSD DEVICE SELECTED", 
-                                      "WARNING: You have selected one or more SSD devices!\n\n"
-                                      "Using multiple-pass erasure on SSDs can:\n"
-                                      "• Damage the SSD by causing excessive wear\n"
-                                      "• Fail to securely erase data due to SSD wear leveling\n"
-                                      "• Not overwrite all sectors due to over-provisioning\n\n"
-                                      "For SSDs, manufacturer-provided secure erase tools are recommended.\n\n"
-                                      "Do you still want to continue?",
-                                      icon="warning"):
-                return
+        if erase_method == "overwrite":
+            for disk in selected_disks:
+                disk_name = disk.replace('/dev/', '')
+                if is_ssd(disk_name):
+                    ssd_selected = True
+                    break
+                    
+            if ssd_selected:
+                if not messagebox.askyesno("WARNING - SSD DEVICE SELECTED", 
+                                          "WARNING: You have selected one or more SSD devices!\n\n"
+                                          "Using multiple-pass erasure on SSDs can:\n"
+                                          "• Damage the SSD by causing excessive wear\n"
+                                          "• Fail to securely erase data due to SSD wear leveling\n"
+                                          "• Not overwrite all sectors due to over-provisioning\n\n"
+                                          "For SSDs, manufacturer-provided secure erase tools are recommended.\n\n"
+                                          "Do you still want to continue?",
+                                          icon="warning"):
+                    return
         
         # Get disk identifiers
         disk_identifiers = []
@@ -331,8 +327,12 @@ class DiskEraserGUI:
         
         # Confirm erasure
         disk_list = "\n".join(disk_identifiers)
+        
+        # Add method-specific information to confirmation dialog
+        method_info = "using cryptographic erasure" if erase_method == "crypto" else f"with {self.passes_var.get()} pass overwrite"
+        
         if not messagebox.askyesno("Confirm Erasure", 
-                                  f"WARNING: You are about to securely erase the following disks:\n\n{disk_list}\n\n"
+                                  f"WARNING: You are about to securely erase the following disks {method_info}:\n\n{disk_list}\n\n"
                                   "This operation CANNOT be undone and ALL DATA WILL BE LOST!\n\n"
                                   "Are you absolutely sure you want to continue?"):
             return
@@ -347,22 +347,26 @@ class DiskEraserGUI:
         # Get options
         fs_choice = self.filesystem_var.get()
         
-        try:
-            passes = int(self.passes_var.get())
-            if passes < 1:
-                messagebox.showerror("Error", "Number of passes must be at least 1")
+        # For overwrite method, validate passes
+        passes = 1  # Default value
+        if erase_method == "overwrite":
+            try:
+                passes = int(self.passes_var.get())
+                if passes < 1:
+                    messagebox.showerror("Error", "Number of passes must be at least 1")
+                    return
+            except ValueError:
+                messagebox.showerror("Error", "Number of passes must be a valid integer")
                 return
-        except ValueError:
-            messagebox.showerror("Error", "Number of passes must be a valid integer")
-            return
         
         # Start processing in a separate thread
         self.status_var.set("Starting erasure process...")
-        threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes), daemon=True).start()
+        threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes, erase_method), daemon=True).start()
     
-    def progress_state(self, disks, fs_choice, passes):
-        self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
-        log_info(f"Starting secure erasure of {len(disks)} disk(s) with {passes} passes")
+    def progress_state(self, disks: List[str], fs_choice: str, passes: int, erase_method: str) -> None:
+        method_str = "cryptographic erasure" if erase_method == "crypto" else f"standard {passes}-pass overwrite"
+        self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
+        log_info(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
         self.update_gui_log(f"Selected filesystem: {fs_choice}")
         log_info(f"Selected filesystem: {fs_choice}")
         
@@ -374,7 +378,7 @@ class DiskEraserGUI:
             self.disk_progress = {disk: 0 for disk in disks}
             
             # Submit all disk tasks
-            futures = {executor.submit(self.process_single_disk, disk, fs_choice, passes): disk for disk in disks}
+            futures = {executor.submit(self.process_disk_wrapper, disk, fs_choice, passes, erase_method): disk for disk in disks}
             
             # Process results as they complete
             for future in as_completed(futures):
@@ -396,100 +400,60 @@ class DiskEraserGUI:
         self.status_var.set("Erasure process completed")
         messagebox.showinfo("Complete", "Disk erasure operation has completed!")
     
-    def process_single_disk(self, disk, fs_choice, passes):
-        # Get the stable disk identifier before erasure
+    def process_disk_wrapper(self, disk: str, fs_choice: str, passes: int, erase_method: str) -> None:
+        """
+        Wrapper for process_disk from disk_operations.py that updates GUI status
+        """
+        # Extract disk name (remove /dev/)
         disk_name = disk.replace('/dev/', '')
+        
+        # Get the disk ID for status updates
         try:
-            # Get disk serial/identifier
-            disk_serial = get_disk_serial(disk_name)
-            self.update_gui_log(f"Processing disk identifier: {disk_serial}")
-            log_info(f"Processing disk identifier: {disk_serial}")
-        except (SubprocessError, FileNotFoundError) as e:
-            error_msg = f"Could not get disk identifier: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            disk_serial = f"unknown_{disk_name}"
-        except KeyboardInterrupt:
-            error_msg = "Disk identification interrupted by user"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            raise
+            disk_id = get_disk_serial(disk_name)
+            self.status_var.set(f"Erasing {disk_id}...")
+        except (CalledProcessError, SubprocessError) as e:
+            self.update_gui_log(f"Error getting disk serial: {str(e)}")
+            self.status_var.set(f"Erasing {disk_name}...")
+        except FileNotFoundError as e:
+            self.update_gui_log(f"Required command not found: {str(e)}")
+            self.status_var.set(f"Erasing {disk_name}...")
+        except PermissionError as e:
+            self.update_gui_log(f"Permission error: {str(e)}")
+            self.status_var.set(f"Erasing {disk_name}...")
+        except OSError as e:
+            self.update_gui_log(f"OS error: {str(e)}")
+            self.status_var.set(f"Erasing {disk_name}...")
+        
+        # Define GUI log callback for process_disk
+        def gui_log_callback(message: str) -> None:
+            self.update_gui_log(message)
         
         try:
-            self.status_var.set(f"Erasing {disk_serial}...")
-            self.update_gui_log(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
-            log_info(f"Starting secure erase with {passes} passes on disk ID: {disk_serial}")
+            # Call process_disk from disk_operations
+            use_crypto = (erase_method == "crypto")
+            process_disk(disk_name, fs_choice, passes, use_crypto, log_func=gui_log_callback)
             
-            # Check if disk is SSD and log a warning
-            if is_ssd(disk_name):
-                self.update_gui_log(f"WARNING: {disk_serial} is an SSD. Multiple-pass erasure may not securely erase all data.")
-                log_info(f"WARNING: {disk_serial} is an SSD. Multiple-pass erasure may not securely erase all data.")
-            
-            # Pass a log function for real-time progress
-            erase_result = erase_disk_hdd(
-                disk_name, 
-                passes, 
-                log_func=lambda msg: self.update_gui_log(f"Shred progress: {msg}")
-            )
-            
-            self.update_gui_log(f"Erase completed on disk ID: {disk_serial}")
-            log_info(f"Erase completed on disk ID: {disk_serial}")
-            
-            # Partition the disk
-            self.status_var.set(f"Partitioning {disk_serial}...")
-            self.update_gui_log(f"Creating partition on disk ID: {disk_serial}")
-            log_info(f"Creating partition on disk ID: {disk_serial}")
-            partition_disk(disk_name)
-            
-            # Wait for the OS to recognize the new partition
-            self.update_gui_log("Waiting for partition to be recognized...")
-            log_info("Waiting for partition to be recognized...")
-            time.sleep(5)
-            
-            # Format the disk
-            self.status_var.set(f"Formatting {disk_serial}...")
-            self.update_gui_log(f"Formatting disk ID: {disk_serial} with {fs_choice}")
-            log_info(f"Formatting disk ID: {disk_serial} with {fs_choice}")
-            format_disk(disk_name, fs_choice)
-            
-            # Log the erase operation with the stable disk identifier and filesystem
-            log_erase_operation(disk_serial, fs_choice)
-            
-            self.update_gui_log(f"Completed operations on disk ID: {disk_serial}")
-            log_info(f"Completed operations on disk ID: {disk_serial}")
-            blank()
-
         except CalledProcessError as e:
-            error_msg = f"Error processing disk ID: {disk_serial}: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
+            self.update_gui_log(f"Process error: {str(e)}")
             raise
         except FileNotFoundError as e:
-            error_msg = f"Command not found: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
+            self.update_gui_log(f"Required command not found: {str(e)}")
             raise
         except PermissionError as e:
-            error_msg = f"Permission denied: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
+            self.update_gui_log(f"Permission error: {str(e)}")
             raise
         except OSError as e:
-            error_msg = f"OS error: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
+            self.update_gui_log(f"OS error: {str(e)}")
             raise
         except KeyboardInterrupt:
-            error_msg = "Operation interrupted by user"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
+            self.update_gui_log("Operation interrupted by user")
             raise
     
-    def update_progress(self, value):
+    def update_progress(self, value: float) -> None:
         self.progress_var.set(value)
         self.root.update_idletasks()
     
-    def update_gui_log(self, message):
+    def update_gui_log(self, message: str) -> None:
         """Update only the GUI log window with a message."""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         log_message = f"[{timestamp}] {message}\n"
@@ -498,7 +462,7 @@ class DiskEraserGUI:
         self.log_text.insert(tk.END, log_message)
         self.log_text.see(tk.END)
 
-def run_gui_mode():
+def run_gui_mode() -> None:
     """Run the GUI version"""
     root = tk.Tk()
     app = DiskEraserGUI(root)

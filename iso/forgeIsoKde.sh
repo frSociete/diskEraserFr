@@ -51,9 +51,10 @@ calamares
 calamares-settings-debian
 squashfs-tools
 xorg
-xfce4
-network-manager
-network-manager-gnome
+kde-plasma-desktop
+kde-standard
+plasma-nm
+sddm
 sudo
 live-boot
 live-config
@@ -62,6 +63,8 @@ tasksel
 tasksel-data
 console-setup
 keyboard-configuration
+cryptsetup
+dmsetup
 EOF
 
 # Set system locale and keyboard layout to French AZERTY
@@ -125,7 +128,7 @@ EOF
 # Make the launcher executable
 chmod +x config/includes.chroot/usr/share/applications/secure_disk_eraser.desktop
 
-# Auto-start in live mode - Create XFCE autostart
+# Auto-start in live mode - Create KDE Plasma autostart
 mkdir -p config/includes.chroot/etc/xdg/autostart/
 cat << EOF > config/includes.chroot/etc/xdg/autostart/disk-eraser.desktop
 [Desktop Entry]
@@ -136,7 +139,7 @@ Exec=sudo /usr/local/bin/de
 Terminal=true
 Icon=drive-harddisk
 Categories=System;Security;
-OnlyShowIn=XFCE;
+OnlyShowIn=KDE;
 EOF
 
 # Configure .bashrc to run main.py on login in live mode but not in installed mode

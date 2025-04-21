@@ -20,7 +20,10 @@ def run_command(command_list: list[str]) -> str:
         sys.exit(130)  # Standard exit code for SIGINT
 
 def list_disks() -> str:
-    print("List of available disks:")
+    """
+    Get a raw string output of available disks using lsblk command.
+    Returns the output of the lsblk command or an empty string if no disks found.
+    """
     try:
         # Use more explicit column specification with -o option and -n to skip header
         output = run_command(["lsblk", "-d", "-o", "NAME,SIZE,TYPE,MODEL", "-n"])
@@ -45,6 +48,57 @@ def list_disks() -> str:
         logging.error("Disk listing interrupted by user (Ctrl+C)")
         print("\nDisk listing interrupted by user (Ctrl+C)")
         sys.exit(130)
+
+def get_disk_list() -> list[dict]:
+    """
+    Get list of available disks as structured data.
+    Returns a list of dictionaries with disk information.
+    Each dictionary contains: 'device', 'size', and 'model'.
+    """
+    try:
+        # Use list_disks function to get raw output
+        output = list_disks()
+        
+        if not output:
+            logging.info("No disks found.")
+            return []
+        
+        # Parse the output from lsblk command
+        disks = []
+        for line in output.strip().split('\n'):
+            if not line.strip():
+                continue
+                
+            # Split the line but preserve the model name which might contain spaces
+            parts = line.strip().split(maxsplit=3)
+            device = parts[0]
+            
+            # Ensure we have at least NAME and SIZE
+            if len(parts) >= 2:
+                size = parts[1]
+                
+                # MODEL may be missing, set to "Unknown" if it is
+                model = parts[3] if len(parts) > 3 else "Unknown"
+                
+                disks.append({
+                    "device": f"/dev/{device}",
+                    "size": size,
+                    "model": model
+                })
+        
+        return disks
+    except FileNotFoundError as e:
+        logging.error(f"Error: Command not found: {str(e)}")
+        return []
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error executing command: {str(e)}")
+        return []
+    except (IndexError, ValueError) as e:
+        logging.error(f"Error parsing disk information: {str(e)}")
+        return []
+    except KeyboardInterrupt:
+        logging.error("Disk listing interrupted by user")
+        return []
 
 def choose_filesystem() -> str:
     """

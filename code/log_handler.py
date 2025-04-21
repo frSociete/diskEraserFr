@@ -18,9 +18,9 @@ except PermissionError:
     sys.exit(1)  # Exit the script to enforce sudo usage
 
 
-def log_erase_operation(disk_id: str, filesystem: str) -> None:
+def log_erase_operation(disk_id: str, filesystem: str, method: str) -> None:
     """Log detailed erasure operation with stable disk identifier."""
-    message = f"Erasure operation for disk ID: {disk_id}. Filesystem: {filesystem}"
+    message = f"Erasure operation for disk ID: {disk_id}. Filesystem: {filesystem}. Erase method: {method}"
     logger.info(message)
 
 def log_info(message: str) -> None:

@@ -1,5 +1,5 @@
 # Define variables
-SCRIPT := ./forgeIsoPy.sh
+SCRIPT := ./forgeIsoXfce.sh
 BUILD_DIR := $(HOME)/debian-live-build
 
 .PHONY: all clean

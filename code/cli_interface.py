@@ -4,10 +4,9 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from subprocess import CalledProcessError, SubprocessError
-
 from disk_erase import get_disk_serial, is_ssd
-from disk_operations import get_active_disk, process_disk  # Import process_disk from disk_operations
-from utils import list_disks, choose_filesystem
+from disk_operations import get_active_disk, process_disk
+from utils import get_disk_list, choose_filesystem
 from log_handler import log_info, log_error
 
 def print_disk_details(disk):
@@ -15,9 +14,16 @@ def print_disk_details(disk):
     try:
         disk_id = get_disk_serial(disk)
         is_disk_ssd = is_ssd(disk)
-        active_disks = get_active_disk()        
+        active_disks = get_active_disk()
         
-        # Fix: Check if any active disk name is a substring of this disk name
+        # Get disk size from get_disk_list function
+        disk_size = "Unknown"
+        available_disks = get_disk_list()
+        for available_disk in available_disks:
+            if available_disk["device"] == f"/dev/{disk}":
+                disk_size = available_disk["size"]
+                break
+        
         is_active = False
         if active_disks:
             for active_disk in active_disks:
@@ -27,6 +33,7 @@ def print_disk_details(disk):
         
         print(f"Disk: /dev/{disk}")
         print(f"  Serial/ID: {disk_id}")
+        print(f"  Size: {disk_size}")
         print(f"  Type: {'SSD' if is_disk_ssd else 'HDD'}")
         print(f"  Status: {'ACTIVE SYSTEM DISK - DANGER!' if is_active else 'Safe to erase'}")
         
@@ -52,29 +59,15 @@ def select_disks() -> list[str]:
     Let the user select disks to erase from the command line, with detailed information.
     """
     try:
-        disk_list = list_disks()
-        if not disk_list:
-            print("No disks detected.")
-            return []
-        
-        print("\n=== Available Disks ===")
-        print(disk_list)
-        print("\n=== Detailed Disk Information ===")
-        
-        available_disks = []
-        for line in disk_list.strip().split('\n'):
-            if not line.strip():
-                continue
-                
-            parts = line.strip().split(maxsplit=3)
-            if len(parts) >= 1:
-                available_disks.append(parts[0])
-        
-        # Print detailed information for each disk
-        for disk in available_disks:
+
+        available_disks = get_disk_list()
+        disk_names = [disk["device"].replace("/dev/", "") for disk in available_disks]
+
+        # Then iterate over disk_names
+        for disk in disk_names:
             print("\n" + "-" * 50)
             print_disk_details(disk)
-        
+            
         print("\n" + "-" * 50)
         print("\nWARNING: This tool will COMPLETELY ERASE selected disks. ALL DATA WILL BE LOST!")
         print("WARNING: If any of these disks are SSDs, using this tool with multiple passes may damage the SSD.")
@@ -142,7 +135,7 @@ def get_disk_confirmations(disks: list[str]) -> list[str]:
     """Get confirmation for each disk."""
     return [disk for disk in disks if confirm_erasure(disk)]
 
-def cli_process_disk(disk, fs_choice, passes):
+def cli_process_disk(disk, fs_choice, passes, use_crypto=False, zero_fill=False):
     """
     Process a single disk for the CLI interface with status output.
     
@@ -158,12 +151,13 @@ def cli_process_disk(disk, fs_choice, passes):
         def log_progress(message):
             print(f"  {message}")
         
-        # Indicate if the disk is an SSD
-        if is_ssd(disk):
+        # Indicate if the disk is an SSD and not using crypto
+        if is_ssd(disk) and not use_crypto:
             print(f"  WARNING: {disk_id} is an SSD - multiple-pass erasure may not be effective")
         
-        # Process the disk using the imported function
-        process_disk(disk, fs_choice, passes, log_func=log_progress)
+        # Process the disk using the imported function with crypto flag and filling method
+        filling_method = "zero" if zero_fill else "random"
+        process_disk(disk, fs_choice, passes, use_crypto, log_func=log_progress, crypto_fill=filling_method)
         
         print(f"Successfully completed all operations on disk {disk_id}")
         return True
@@ -203,6 +197,7 @@ def run_cli_mode(args):
         print("=" * 60)
         
         # First, list disks and select disks to erase
+        print("List of available disks: ")
         disks = select_disks()
         if not disks:
             print("No disks selected. Exiting.")
@@ -217,16 +212,23 @@ def run_cli_mode(args):
         # Finally, choose filesystem and number of passes
         fs_choice = args.filesystem or choose_filesystem()
         passes = args.passes
+        use_crypto = args.crypto
+        zero_fill = args.zero
         
         print(f"Selected filesystem: {fs_choice}")
-        print(f"Number of passes: {passes}")
+        
+        if use_crypto:
+            fill_method = "zeros" if zero_fill else "random data"
+            print(f"Erasure method: Cryptographic erasure (filling with {fill_method})")
+        else:
+            print(f"Erasure method: Standard with {passes} passes")
         
         print("\nAll disks confirmed. Starting operations...\n")
         log_info(f"Starting disk erasure operations on {len(confirmed_disks)} disk(s)")
         
         with ThreadPoolExecutor() as executor:
-            # Use our cli_process_disk function instead of process_disk directly
-            futures = [executor.submit(cli_process_disk, disk, fs_choice, passes) for disk in confirmed_disks]
+            # Use our cli_process_disk function with the crypto flag and zero_fill option
+            futures = [executor.submit(cli_process_disk, disk, fs_choice, passes, use_crypto, zero_fill) for disk in confirmed_disks]
             
             completed = 0
             for future in as_completed(futures):

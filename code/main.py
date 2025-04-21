@@ -12,6 +12,8 @@ def main():
     parser.add_argument('--cli', action='store_true', help="Run in command-line mode instead of GUI")
     parser.add_argument('-f', '--filesystem', choices=['ext4', 'ntfs', 'vfat'], help="Filesystem type to use")
     parser.add_argument('-p', '--passes', type=int, default=5, help="Number of passes for erasure")
+    parser.add_argument('--crypto', action='store_true', help="Use cryptographic erasure instead of standard multi-pass method")
+    parser.add_argument('--zero', action='store_true', help="Fill encrypted disk with zero data instead of random data")
     args = parser.parse_args()
     
     # Check for root privileges
