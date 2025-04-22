@@ -1,73 +1,73 @@
-# Disk Eraser - Secure Disk Wiping and Formatting Tool 💽
+# Disk Eraser - Outil de Nettoyage et Formatage Sécurisé de Disques 💽
 
 <div style="display: flex; align-items: center;">
   <img src="./background" alt="Logo" width="120" style="margin-right: 20px;">
   <p>
-    <b>Disk Eraser</b> is a tool for securely erasing data from storage devices while providing the option to format with your chosen file system (EXT4, NTFS, or VFAT). It supports parallel disk erasure with configurable overwrite passes for thorough data sanitization.
+    <b>Disk Eraser</b> est un outil pour effacer de manière sécurisée les données des périphériques de stockage tout en offrant la possibilité de formater avec le système de fichiers de votre choix (EXT4, NTFS ou VFAT). Il prend en charge l'effacement parallèle des disques avec des passages d'écrasement configurables pour une désinfection approfondie des données.
   </p>
 </div>
 
-## Secure Erasure Methods
+## Méthodes d'Effacement Sécurisé
 
-### For HDDs: Multiple Overwrite Passes
-- Recommended for traditional mechanical hard drives
-- Uses multiple passes of random data followed by a zero pass
-- Prevents data recovery through physical analysis of magnetic residue
+### Pour les Disques Durs (HDD) : Passes Multiples d'Écrasement
+- Recommandé pour les disques durs mécaniques traditionnels
+- Utilise plusieurs passages de données aléatoires suivis d'un passage à zéro
+- Empêche la récupération des données par analyse physique des résidus magnétiques
 
-### For SSDs: Cryptographic Erasure
-- Recommended for solid-state drives and flash storage
-- Options include:
-  - **Random Data Fill**: Overwrites with cryptographically secure random data
-  - **Zero Fill**: Quick erasure by writing zeros to all addressable locations
-- Works with ATA Secure Erase for compatible devices
+### Pour les SSD : Effacement Cryptographique
+- Recommandé pour les disques SSD et le stockage flash
+- Les options incluent :
+  - **Remplissage de Données Aléatoires** : Écrase avec des données aléatoires cryptographiquement sécurisées
+  - **Remplissage à Zéro** : Effacement rapide en écrivant des zéros à tous les emplacements adressables
+- Fonctionne avec ATA Secure Erase pour les appareils compatibles
 
-> ⚠️ **SSD COMPATIBILITY WARNING**
+> ⚠️ **AVERTISSEMENT DE COMPATIBILITÉ SSD**
 > 
-> While this tool can detect and work with SSDs, please note:
+> Bien que cet outil puisse détecter et fonctionner avec les SSD, veuillez noter :
 > 
-> - **SSD Wear Leveling**: Makes traditional overwrite methods less effective
-> - **Over-provisioning**: Hidden reserved space may retain data
-> - **Device Lifespan**: Multiple passes can reduce SSD longevity
+> - **Répartition d'Usure des SSD** : Rend les méthodes traditionnelles d'écrasement moins efficaces
+> - **Sur-provisionnement** : L'espace réservé caché peut conserver des données
+> - **Durée de Vie de l'Appareil** : Les passages multiples peuvent réduire la longévité du SSD
 > 
-> For SSDs, cryptographic erasure methods are recommended over multiple overwrite passes.
+> Pour les SSD, les méthodes d'effacement cryptographique sont recommandées plutôt que les passages multiples d'écrasement.
 
 ---
 
-## Features ✨
+## Fonctionnalités ✨
 
-- **Dual Interface**: CLI and GUI modes for flexibility
-- **Smart Device Detection**: Automatically identifies SSDs vs HDDs
-- **Secure Erasure Methods**:
-  - Multiple overwrite passes for HDDs
-  - Cryptographic erasure for SSDs (random or zero fill)
-- **Safety Features**: Detects active system disks and requires confirmation
-- **Parallel Processing**: Erases multiple disks simultaneously
-- **Post-Erasure Setup**: Automatic partitioning and formatting
-- **Flexible Formats**: Supports NTFS, EXT4, and VFAT file systems
-- **Multiple Deployment Options**: Run as Python code, Linux command, or bootable ISO
-
----
-
-## Prerequisites 📋
-
-- **Root privileges** (required for disk access)
-- **Python 3** with **Tkinter** (for GUI mode)
-- **Basic disk management knowledge** - this tool **permanently erases data** ⚠️
+- **Double Interface** : Modes CLI et GUI pour plus de flexibilité
+- **Détection Intelligente des Appareils** : Identifie automatiquement les SSD et HDD
+- **Méthodes d'Effacement Sécurisé** :
+  - Passages multiples d'écrasement pour les HDD
+  - Effacement cryptographique pour les SSD (aléatoire ou remplissage à zéro)
+- **Fonctionnalités de Sécurité** : Détecte les disques système actifs et nécessite une confirmation
+- **Traitement Parallèle** : Efface plusieurs disques simultanément
+- **Configuration Post-Effacement** : Partitionnement et formatage automatiques
+- **Formats Flexibles** : Prend en charge les systèmes de fichiers NTFS, EXT4 et VFAT
+- **Options de Déploiement Multiples** : Exécution en tant que code Python, commande Linux ou ISO amorçable
 
 ---
 
-## Installation and Usage 🚀
+## Prérequis 📋
 
-### Using Python Code 🐍
+- **Privilèges root** (requis pour l'accès aux disques)
+- **Python 3** avec **Tkinter** (pour le mode GUI)
+- **Connaissances de base en gestion de disque** - cet outil **efface définitivement les données** ⚠️
+
+---
+
+## Installation et Utilisation 🚀
+
+### Utilisation du Code Python 🐍
 
 ```bash
 git clone https://github.com/Bolo101/diskEraser.git
 cd diskEraser/code/python
-sudo python3 main.py         # GUI mode (default)
-sudo python3 main.py --cli   # Command-line mode
+sudo python3 main.py         # Mode GUI (par défaut)
+sudo python3 main.py --cli   # Mode ligne de commande
 ```
 
-### Install as Linux Command 💻
+### Installation en tant que Commande Linux 💻
 
 ```bash
 sudo mkdir -p /usr/local/bin/diskeraser
@@ -75,93 +75,93 @@ sudo cp diskEraser/code/python/*.py /usr/local/bin/diskeraser
 sudo chmod +x /usr/local/bin/diskeraser/main.py
 sudo ln -s /usr/local/bin/diskeraser/main.py /usr/local/bin/diskeraser
 
-# Then run:
-sudo diskeraser           # GUI mode
-sudo diskeraser --cli     # CLI mode
+# Puis exécutez :
+sudo diskeraser           # Mode GUI
+sudo diskeraser --cli     # Mode CLI
 ```
 
-### Using Bootable ISO 💿
+### Utilisation de l'ISO Amorçable 💿
 
-1. **Create or download ISO**:
+1. **Créer ou télécharger l'ISO** :
    ```bash
    cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
    ```
-   Or download pre-built: [Disk Eraser ISO v4.0](https://archive.org/details/diskEraser-V5)
+   Ou téléchargez la version précompilée : [Disk Eraser ISO v4.0](https://archive.org/details/diskEraser-V5)
 
-2. **Flash to USB**:
+2. **Flasher sur USB** :
    ```bash
    sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
    ```
 
-3. **Boot from USB** and follow on-screen instructions
+3. **Démarrer depuis l'USB** et suivre les instructions à l'écran
 
 ---
 
-## Command Line Options ⌨️
+## Options en Ligne de Commande ⌨️
 
 ```bash
-# Format options
+# Options de formatage
 -f ext4|ntfs|vfat, --filesystem ext4|ntfs|vfat
 
-# Erase pass count
--p NUMBER, --passes NUMBER
+# Nombre de passes d'effacement
+-p NOMBRE, --passes NOMBRE
 
-# Interface mode
---cli           # Use command-line interface
+# Mode d'interface
+--cli           # Utiliser l'interface en ligne de commande
 
-# Examples:
+# Exemples :
 python3 main.py -f ext4 -p 3      # GUI, EXT4, 3 passes
-python3 main.py --cli -f ntfs     # CLI, NTFS, default passes
+python3 main.py --cli -f ntfs     # CLI, NTFS, passes par défaut
 ```
 
 ---
 
-## Project Structure 📁
+## Structure du Projet 📁
 
 ```
 project/
 ├── README.md               # Documentation
-├── code/                   # Python scripts
-│   ├── disk_erase.py       # Erasure module
-│   ├── disk_format.py      # Formatting module
-│   ├── disk_operations.py  # Disk operations
-│   ├── disk_partition.py   # Partitioning module
-│   ├── gui_interface.py    # GUI interface
-│   ├── cli_interface.py    # CLI interface
-│   ├── log_handler.py      # Logging functionality
-│   ├── main.py             # Main program logic
-│   └── utils.py            # Utility functions
-├── iso/                    # ISO creation resources
-│   ├── forgeIsoPy.sh       # ISO generator
-│   └── makefile            # Build automation
-├── setup.sh                # Dependency installer
-└── LICENSE                 # CC 4.0 license
+├── code/                   # Scripts Python
+│   ├── disk_erase.py       # Module d'effacement
+│   ├── disk_format.py      # Module de formatage
+│   ├── disk_operations.py  # Opérations sur disque
+│   ├── disk_partition.py   # Module de partitionnement
+│   ├── gui_interface.py    # Interface GUI
+│   ├── cli_interface.py    # Interface CLI
+│   ├── log_handler.py      # Fonctionnalité de journalisation
+│   ├── main.py             # Logique principale du programme
+│   └── utils.py            # Fonctions utilitaires
+├── iso/                    # Ressources de création d'ISO
+│   ├── forgeIsoPy.sh       # Générateur d'ISO
+│   └── makefile            # Automatisation de construction
+├── setup.sh                # Installateur de dépendances
+└── LICENSE                 # Licence CC 4.0
 ```
 
 ---
 
-## Safety Notes ⚠️
+## Notes de Sécurité ⚠️
 
-- **Data Loss**: This tool **permanently erases** data. Back up important information first.
-- **Root Access**: Run with appropriate privileges (root/sudo).
-- **Storage Types**: Different erasure methods are optimized for different storage technologies:
-  - For HDDs: Multiple overwrite passes
-  - For SSDs: Cryptographic erasure (random or zero fill)
-- **System Protection**: The tool detects and warns about active system disks.
+- **Perte de Données** : Cet outil **efface définitivement** les données. Sauvegardez d'abord les informations importantes.
+- **Accès Root** : Exécutez avec les privilèges appropriés (root/sudo).
+- **Types de Stockage** : Différentes méthodes d'effacement sont optimisées pour différentes technologies de stockage :
+  - Pour les HDD : Passes multiples d'écrasement
+  - Pour les SSD : Effacement cryptographique (aléatoire ou remplissage à zéro)
+- **Protection du Système** : L'outil détecte et avertit des disques système actifs.
 
 ---
 
-## License ⚖️
+## Licence ⚖️
 
-This project is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Ce projet est sous licence [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
-![Creative Commons License](https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png)
+![Licence Creative Commons](https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png)
 
-You are free to:
-- **Share**: Copy and redistribute the material
-- **Adapt**: Remix, transform, and build upon the material
+Vous êtes libre de :
+- **Partager** : Copier et redistribuer le matériel
+- **Adapter** : Remixer, transformer et développer le matériel
 
-Under the following terms:
-- **Attribution**: Provide appropriate credit
-- **NonCommercial**: Not for commercial use
-- **ShareAlike**: Distribute modifications under the same license
+Selon les conditions suivantes :
+- **Attribution** : Fournir le crédit approprié
+- **Pas d'Utilisation Commerciale** : Pas d'utilisation à des fins commerciales
+- **Partage à l'Identique** : Distribuer les modifications sous la même licence
