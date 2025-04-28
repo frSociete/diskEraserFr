@@ -1,13 +1,18 @@
 # Define variables
-SCRIPT := ./forgeIsoXfce.sh
+SCRIPT_XFCE := ./forgeIsoXfce.sh
+SCRIPT_KDE := ./forgeIsoKde.sh
 BUILD_DIR := $(HOME)/debian-live-build
 
 .PHONY: all clean
 
 # Default target: run the script
 all:
-	chmod +x $(SCRIPT)
-	bash $(SCRIPT)
+	chmod +x $(SCRIPT_XFCE)
+	bash $(SCRIPT_XFCE)
+
+kde:
+	chmod +x $(SCRIPT_KDE)
+	bash $(SCRIPT_KDE)
 
 # Clean target: remove the debian-live-build directory
 clean:
