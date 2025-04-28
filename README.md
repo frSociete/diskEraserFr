@@ -83,10 +83,20 @@ sudo diskeraser --cli     # CLI mode
 ### Using Bootable ISO 💿
 
 1. **Create or download ISO**:
+   - Create XFCE based iso:
+   
    ```bash
-   cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
+   cd diskEraser/iso && make
    ```
-   Or download pre-built: [Disk Eraser ISO v5.0](https://archive.org/details/diskEraser-V5)
+
+   - Create KDE based iso:
+
+   ```bash
+   cd diskEraser/iso && make kde
+   ```
+   - Pre-built ISO
+
+   Download pre-built: [Disk Eraser ISO v5.0](https://archive.org/details/diskEraser-V5)
 
 2. **Flash to USB**:
    ```bash
