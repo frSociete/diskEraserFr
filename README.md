@@ -82,11 +82,15 @@ sudo diskeraser --cli     # Mode CLI
 
 ### Utilisation de l'ISO Amorçable 💿
 
+
+=======
 1. **Créer ou télécharger l'ISO** :
    ```bash
-   cd diskEraser/iso && chmod +x forgeIso.sh && sudo bash forgeIso.sh
+   cd diskEraser/iso && make
    ```
+
    Ou téléchargez la version précompilée : [Disk Eraser ISO v4.0](https://archive.org/details/diskEraser-V5)
+
 
 2. **Flasher sur USB** :
    ```bash
@@ -161,7 +165,9 @@ Vous êtes libre de :
 - **Partager** : Copier et redistribuer le matériel
 - **Adapter** : Remixer, transformer et développer le matériel
 
+
 Selon les conditions suivantes :
 - **Attribution** : Fournir le crédit approprié
 - **Pas d'Utilisation Commerciale** : Pas d'utilisation à des fins commerciales
 - **Partage à l'Identique** : Distribuer les modifications sous la même licence
+
