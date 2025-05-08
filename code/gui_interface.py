@@ -242,33 +242,57 @@ class DiskEraserGUI:
         
         # Create checkboxes for each disk
         for disk in self.disks:
-            frame = ttk.Frame(self.scrollable_disk_frame)
-            frame.pack(fill=tk.X, pady=2)
+            # Create a container frame for each disk entry
+            disk_entry_frame = ttk.Frame(self.scrollable_disk_frame)
+            disk_entry_frame.pack(fill=tk.X, pady=5, padx=2)
+            
+            # Top row with checkbox
+            checkbox_row = ttk.Frame(disk_entry_frame)
+            checkbox_row.pack(fill=tk.X)
             
             var = tk.BooleanVar()
             self.disk_vars[disk['device']] = var
             
-            cb = ttk.Checkbutton(frame, variable=var)
+            cb = ttk.Checkbutton(checkbox_row, variable=var)
             cb.pack(side=tk.LEFT)
             
-            # Disk identifier label with size info
+            # Get disk information
             device_name = disk['device'].replace('/dev/', '')
             disk_identifier = get_disk_serial(device_name)
             is_device_ssd = is_ssd(device_name)
             ssd_indicator = " (SSD)" if is_device_ssd else " (HDD)"
             
-            # Set the text color to red if this is the active disk
-            is_active = self.active_disk and any(disk in device_name for disk in self.active_disk)
-
-            text_color = "red" if is_active else "red" if is_device_ssd else "black"
+            # Determine if this is the active disk
+            is_active = self.active_disk and any(active_disk in device_name for active_disk in self.active_disk)
             active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
             
-            disk_label = ttk.Label(
-                frame, 
-                text=f"{disk_identifier}{ssd_indicator}{active_indicator} ({disk['size']}) - {disk['model']}",
+            # Set text color
+            text_color = "red" if is_active else "red" if is_device_ssd else "black"
+            
+            # Create disk identifier label with wrapping
+            disk_id_label = ttk.Label(
+                checkbox_row, 
+                text=f"{disk_identifier}{ssd_indicator}{active_indicator}",
+                foreground=text_color,
+                wraplength=300
+            )
+            disk_id_label.pack(side=tk.LEFT, padx=5, fill=tk.X)
+            
+            # Create a second row for disk details that will wrap if needed
+            details_row = ttk.Frame(disk_entry_frame)
+            details_row.pack(fill=tk.X, padx=25)
+            
+            # Create disk details label
+            disk_details_label = ttk.Label(
+                details_row,
+                text=f"Size: {disk['size']} - Model: {disk['model']}",
+                wraplength=300,
                 foreground=text_color
             )
-            disk_label.pack(side=tk.LEFT, padx=5)
+            disk_details_label.pack(side=tk.LEFT, fill=tk.X)
+            
+            # Add a separator between disk entries for better visual separation
+            ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)
     
     def start_erasure(self) -> None:
         # Get selected disks
