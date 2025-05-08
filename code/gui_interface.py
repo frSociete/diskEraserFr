@@ -223,7 +223,7 @@ class DiskEraserGUI:
             
         # Set disclaimer if we found an active disk
         if self.active_disk:
-            self.disclaimer_var.set(f"ATTENTION : Le disque marqué en rouge contient le système de fichiers actif. L'effacement de ce disque provoquera une défaillance du système et une perte de données !")
+            self.disclaimer_var.set(f"ATTENTION : Le disque marqué en rouge contient le système de fichiers actif. L'effacement de ce disque est bloqué pour éviter une défaillance du système et une perte de données !")
         else:
             self.disclaimer_var.set("")
         
@@ -250,11 +250,9 @@ class DiskEraserGUI:
             checkbox_row = ttk.Frame(disk_entry_frame)
             checkbox_row.pack(fill=tk.X)
             
-            var = tk.BooleanVar()
+            var = tk.BooleanVar(value=False)
             self.disk_vars[disk['device']] = var
             
-            cb = ttk.Checkbutton(checkbox_row, variable=var)
-            cb.pack(side=tk.LEFT)
             
             # Get disk information
             device_name = disk['device'].replace('/dev/', '')
@@ -269,7 +267,13 @@ class DiskEraserGUI:
             text_color = "red" if is_active else "red" if is_device_ssd else "black"
             active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
 
-            
+                        # Create the checkbox and set state based on if it's an active disk
+            cb = ttk.Checkbutton(checkbox_row, variable=var, state="disabled" if is_active else "normal")
+            # Make sure we can't select the active disk
+            if is_active:
+                var.set(False)
+                cb.configure(state="disabled")
+            cb.pack(side=tk.LEFT)
             
             # Create disk identifier label with wrapping
             disk_id_label = ttk.Label(
@@ -312,14 +316,6 @@ class DiskEraserGUI:
                 active_disk_selected = True
                 break
 
-        # Additional warning for active disk
-        if active_disk_selected:
-            if not messagebox.askyesno("DANGER - DISQUE SYSTÈME SÉLECTIONNÉ", 
-                                      "ATTENTION : Vous avez sélectionné le DISQUE SYSTÈME ACTIF !\n\n"
-                                      "L'effacement de ce disque provoquera le PLANTAGE de votre système et entraînera une PERTE DE DONNÉES PERMANENTE !\n\n"
-                                      "Êtes-vous absolument sûr de vouloir continuer ?",
-                                      icon="warning"):
-                return
         
         # Get erasure method
         erase_method = self.erase_method_var.get()
