@@ -45,6 +45,7 @@
 - **Post-Erasure Setup**: Automatic partitioning and formatting
 - **Flexible Formats**: Supports NTFS, EXT4, and VFAT file systems
 - **Multiple Deployment Options**: Run as Python code, Linux command, or bootable ISO
+- **Improved disks listing format in GUI mode**: Prompts useful data about disks detected
 
 ---
 
@@ -96,7 +97,7 @@ sudo diskeraser --cli     # CLI mode
    ```
    - Pre-built ISO
 
-   Download pre-built: [Disk Eraser ISO v5.0](https://archive.org/details/diskEraser-V5)
+   Download pre-built: [Disk Eraser ISO v5.1](https://archive.org/details/diskEraser-V5.1)
 
 2. **Flash to USB**:
    ```bash
