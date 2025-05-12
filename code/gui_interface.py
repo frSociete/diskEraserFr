@@ -73,7 +73,7 @@ class DiskEraserGUI:
         
         # Add SSD warning disclaimer at the bottom of disk frame
         self.ssd_disclaimer_var = tk.StringVar(value="")
-        self.ssd_disclaimer_label = ttk.Label(disk_frame, textvariable=self.ssd_disclaimer_var, foreground="red", wraplength=250)
+        self.ssd_disclaimer_label = ttk.Label(disk_frame, textvariable=self.ssd_disclaimer_var, foreground="blue", wraplength=250)
         self.ssd_disclaimer_label.pack(side=tk.BOTTOM, pady=5)
         
         # Refresh button
@@ -236,7 +236,7 @@ class DiskEraserGUI:
                 break
                 
         if has_ssd:
-            self.ssd_disclaimer_var.set("ATTENTION : Périphériques SSD détectés. L'effacement en plusieurs passes peut endommager les SSD et NE PAS réussir à supprimer les données en toute sécurité en raison de la répartition d'usure des SSD. Pour les SSD, utilisez plutôt les outils d'effacement sécurisé fournis par le fabricant.")
+            self.ssd_disclaimer_var.set("ATTENTION : Périphériques SSD détectés. L'effacement en plusieurs passes peut endommager les SSD et NE PAS réussir à supprimer les données en toute sécurité en raison de la répartition d'usure des SSD. Pour les SSD, utilisez le mode d'effacement cryptographique.")
         else:
             self.ssd_disclaimer_var.set("")
         
@@ -264,7 +264,7 @@ class DiskEraserGUI:
             # Set the text color to red if this is the active disk
             is_active = self.active_disk and any(disk in device_name for disk in self.active_disk)
 
-            text_color = "red" if is_active else "red" if is_device_ssd else "black"
+            text_color = "red" if is_active else "blue" if is_device_ssd else "black"
             active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
 
                         # Create the checkbox and set state based on if it's an active disk
