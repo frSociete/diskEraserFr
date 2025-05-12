@@ -73,7 +73,7 @@ class DiskEraserGUI:
         
         # Add SSD warning disclaimer at the bottom of disk frame
         self.ssd_disclaimer_var = tk.StringVar(value="")
-        self.ssd_disclaimer_label = ttk.Label(disk_frame, textvariable=self.ssd_disclaimer_var, foreground="red", wraplength=250)
+        self.ssd_disclaimer_label = ttk.Label(disk_frame, textvariable=self.ssd_disclaimer_var, foreground="blue", wraplength=250)
         self.ssd_disclaimer_label.pack(side=tk.BOTTOM, pady=5)
         
         # Refresh button
@@ -236,7 +236,7 @@ class DiskEraserGUI:
                 break
                 
         if has_ssd:
-            self.ssd_disclaimer_var.set("WARNING: SSD devices detected. Multiple-pass erasure may damage SSDs and NOT achieve secure data deletion due to SSD wear leveling. For SSDs, use manufacturer-provided secure erase tools instead.")
+            self.ssd_disclaimer_var.set("WARNING: SSD devices detected. Multiple-pass erasure may damage SSDs and NOT achieve secure data deletion due to SSD wear leveling. For SSDs, use cryptographic erase mode instead.")
         else:
             self.ssd_disclaimer_var.set("")
         
@@ -267,7 +267,7 @@ class DiskEraserGUI:
             active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
             
             # Set text color
-            text_color = "red" if is_active else "red" if is_device_ssd else "black"
+            text_color = "red" if is_active else "blue" if is_device_ssd else "black"
             
             # Create disk identifier label with wrapping
             disk_id_label = ttk.Label(
@@ -338,7 +338,7 @@ class DiskEraserGUI:
                                           "• Damage the SSD by causing excessive wear\n"
                                           "• Fail to securely erase data due to SSD wear leveling\n"
                                           "• Not overwrite all sectors due to over-provisioning\n\n"
-                                          "For SSDs, manufacturer-provided secure erase tools are recommended.\n\n"
+                                          "For SSDs, use cryptographic erasure \n\n"
                                           "Do you still want to continue?",
                                           icon="warning"):
                     return
