@@ -136,7 +136,8 @@ project/
 │   ├── main.py             # Logique principale du programme
 │   └── utils.py            # Fonctions utilitaires
 ├── iso/                    # Ressources de création d'ISO
-│   ├── forgeIsoPy.sh       # Générateur d'ISO
+│   ├── forgeIsoKde.sh       # Générateur d'ISO avec KDE
+│   ├── forgeIsoXfce.sh       # Générateur d'ISO avec XFCE4
 │   └── makefile            # Automatisation de construction
 ├── setup.sh                # Installateur de dépendances
 └── LICENSE                 # Licence CC 4.0
