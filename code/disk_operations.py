@@ -1,14 +1,12 @@
 import time
-import re
+from utils import run_command
 from subprocess import CalledProcessError
-import os
+import re
 from disk_erase import erase_disk_hdd, get_disk_serial, is_ssd, erase_disk_crypto
 from disk_partition import partition_disk
 from disk_format import format_disk
 from log_handler import log_info, log_error, log_erase_operation, blank
-from utils import run_command
 
-# Now let's update the process_disk function in disk_operations.py
 def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = False, crypto_fill: str = "random", log_func=None) -> None:
     """
     Process a single disk: erase, partition, and format it.
@@ -104,7 +102,11 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
         raise
 
 def get_active_disk():
-    """Detect the physical disk backing the root filesystem"""
+    """
+    Detect the active device backing the root filesystem.
+    Uses LVM logic if the root device is a logical volume (/dev/mapper/),
+    otherwise uses regular disk detection logic.
+    """
     try:
         # Step 1: Find the root mount device
         with open('/proc/mounts', 'r') as f:
@@ -120,27 +122,54 @@ def get_active_disk():
 
         log_info(f"Root device detected: {root_device}")
 
-        current_device = root_device
-        visited = set()
+        # If LVM or device mapper, use LVM logic
+        if '/dev/mapper/' in root_device or '/dev/dm-' in root_device:
+            # LVM logic (from lvm.py)
+            log_info(f"Detected logical volume: {root_device}")
+            return root_device
 
-        while True:
-            if current_device in visited:
-                log_error(f"Loop detected while tracing {current_device}")
-                return None
-            visited.add(current_device)
+        # Otherwise, use regular disk logic (from regular.py)
+        devices = set()
 
-            # Strip /dev/ if needed
-            device_name = current_device.replace('/dev/', '')
-            pkname_output = run_command(["lsblk", "-no", "PKNAME", f"/dev/{device_name}"]).strip()
+        # Get the mount point of the root filesystem
+        output = run_command(["df", "-h", "/"])
+        lines = output.strip().split('\n')
+        if len(lines) >= 2:  # Header plus at least one entry
+            device = lines[1].split()[0]
+            match = re.search(r'/dev/([a-zA-Z]+)', device)
+            if match:
+                devices.add(match.group(1))
 
-            if not pkname_output:
-                # No parent → we reached physical disk
-                disk_name = os.path.basename(current_device)
-                log_info(f"Resolved root device to disk: {disk_name}")
-                print(disk_name)
-                return [disk_name]
+        # Look for live boot media mount points
+        output = run_command(["df", "-h"])
+        lines = output.strip().split('\n')
+        for line in lines[1:]:  # Skip header line
+            parts = line.split()
+            if len(parts) >= 6:  # Ensure we have enough columns
+                device = parts[0]
+                mount_point = parts[5]
+                if "/run/live" in mount_point:
+                    match = re.search(r'/dev/([a-zA-Z]+)', device)
+                    if match:
+                        devices.add(match.group(1))
 
-            current_device = f"/dev/{pkname_output}"
+        return list(devices) if devices else None
+
+    except FileNotFoundError:
+        log_error(f"Error: 'df' command not found")
+        return None
+
+    except CalledProcessError as e:
+        log_error(f"Error running 'df' command: {str(e)}")
+        return None
+
+    except (IndexError, ValueError) as e:
+        log_error(f"Error parsing command output: {str(e)}")
+        return None
+
+    except KeyboardInterrupt:
+        log_error("Operation interrupted by user")
+        return None
 
     except Exception as e:
         log_error(f"Error in get_active_disk: {str(e)}")
