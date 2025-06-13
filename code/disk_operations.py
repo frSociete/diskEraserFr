@@ -101,7 +101,7 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
             log_func(f"Processing of disk {disk} interrupted by user")
         raise
 
-def get_active_disk():
+def get_active_disk(log_func=None) -> list:
     """
     Detect the active device backing the root filesystem.
     Uses LVM logic if the root device is a logical volume (/dev/mapper/),
