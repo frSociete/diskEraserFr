@@ -120,12 +120,9 @@ def get_active_disk(log_func=None) -> list:
             log_error("Could not detect root filesystem device")
             return None
 
-        log_info(f"Root device detected: {root_device}")
-
         # If LVM or device mapper, use LVM logic
         if '/dev/mapper/' in root_device or '/dev/dm-' in root_device:
             # LVM logic (from lvm.py)
-            log_info(f"Detected logical volume: {root_device}")
             return root_device
 
         # Otherwise, use regular disk logic (from regular.py)
