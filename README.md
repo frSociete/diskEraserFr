@@ -37,6 +37,7 @@
 
 - **Dual Interface**: CLI and GUI modes for flexibility
 - **Smart Device Detection**: Automatically identifies SSDs vs HDDs
+- **LVM Support**: Handles LVM disk management
 - **Secure Erasure Methods**:
   - Multiple overwrite passes for HDDs
   - Cryptographic erasure for SSDs (random or zero fill)
