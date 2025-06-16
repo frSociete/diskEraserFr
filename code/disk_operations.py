@@ -100,6 +100,26 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
         if log_func:
             log_func(f"Processing of disk {disk} interrupted by user")
         raise
+    except ImportError as e:
+        log_error(f"Required module not found for disk {disk}: {str(e)}")
+        if log_func:
+            log_func(f"Required module not found for disk {disk}: {str(e)}")
+        raise
+    except AttributeError as e:
+        log_error(f"Function or method not available for disk {disk}: {str(e)}")
+        if log_func:
+            log_func(f"Function or method not available for disk {disk}: {str(e)}")
+        raise
+    except TypeError as e:
+        log_error(f"Invalid argument type for disk {disk}: {str(e)}")
+        if log_func:
+            log_func(f"Invalid argument type for disk {disk}: {str(e)}")
+        raise
+    except ValueError as e:
+        log_error(f"Invalid argument value for disk {disk}: {str(e)}")
+        if log_func:
+            log_func(f"Invalid argument value for disk {disk}: {str(e)}")
+        raise
 
 def get_active_disk():
     """
@@ -170,7 +190,7 @@ def get_active_disk():
                                 match = re.search(r'/dev/([a-zA-Z]+)', device)
                                 if match:
                                     devices.add(match.group(1))
-                except Exception as e:
+                except (FileNotFoundError, CalledProcessError) as e:
                     log_error(f"Error running df command: {str(e)}")
         
         else:
@@ -211,7 +231,7 @@ def get_active_disk():
                                 devices.add(match.group(1))
                                 live_boot_found = True
                                 log_info(f"Found live boot device: {match.group(1)}")
-            except Exception as e:
+            except (FileNotFoundError, CalledProcessError) as e:
                 log_info(f"Could not check for live boot devices: {str(e)}")
 
         # Step 4: Return logic
@@ -232,19 +252,27 @@ def get_active_disk():
     except FileNotFoundError as e:
         log_error(f"Required file not found: {str(e)}")
         return None
-
+    except PermissionError as e:
+        log_error(f"Permission denied accessing system files: {str(e)}")
+        return None
+    except OSError as e:
+        log_error(f"OS error accessing system information: {str(e)}")
+        return None
     except CalledProcessError as e:
         log_error(f"Error running command: {str(e)}")
         return None
-
     except (IndexError, ValueError) as e:
         log_error(f"Error parsing command output: {str(e)}")
         return None
-
+    except re.error as e:
+        log_error(f"Regex pattern error: {str(e)}")
+        return None
     except KeyboardInterrupt:
         log_error("Operation interrupted by user")
         return None
-
-    except Exception as e:
-        log_error(f"Error in get_active_disk: {str(e)}")
+    except UnicodeDecodeError as e:
+        log_error(f"Error decoding file content: {str(e)}")
+        return None
+    except MemoryError:
+        log_error("Insufficient memory to process device information")
         return None

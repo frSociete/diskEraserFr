@@ -123,6 +123,10 @@ def choose_filesystem() -> str:
             logging.error("Filesystem selection interrupted by user (Ctrl+C)")
             print("\nFilesystem selection interrupted by user (Ctrl+C)")
             sys.exit(130)
+        except EOFError:
+            logging.error("Input stream closed unexpectedly")
+            print("\nInput stream closed unexpectedly")
+            sys.exit(1)
 
 
 def get_physical_drives_for_logical_volumes(active_devices: list) -> set:
@@ -190,8 +194,12 @@ def get_physical_drives_for_logical_volumes(active_devices: list) -> set:
                 logging.error(f"Could not query device tree for {physical_device}: {str(e)}")
                 continue
                 
-    except Exception as e:
-        logging.error(f"Error mapping logical volumes to physical drives: {str(e)}")
+    except (AttributeError, TypeError) as e:
+        logging.error(f"Error processing device data structures: {str(e)}")
+    except MemoryError:
+        logging.error("Insufficient memory to process logical volume mapping")
+    except OSError as e:
+        logging.error(f"OS error during logical volume mapping: {str(e)}")
     
     return physical_drives
 
@@ -206,16 +214,24 @@ def get_base_disk(device_name: str) -> str:
     """
     import re
     
-    # Handle nvme devices (e.g., nvme0n1p1 -> nvme0n1)
-    if 'nvme' in device_name:
-        match = re.match(r'(nvme\d+n\d+)', device_name)
+    try:
+        # Handle nvme devices (e.g., nvme0n1p1 -> nvme0n1)
+        if 'nvme' in device_name:
+            match = re.match(r'(nvme\d+n\d+)', device_name)
+            if match:
+                return match.group(1)
+        
+        # Handle traditional devices (e.g., sda1 -> sda)
+        match = re.match(r'([a-zA-Z/]+[a-zA-Z])', device_name)
         if match:
             return match.group(1)
-    
-    # Handle traditional devices (e.g., sda1 -> sda)
-    match = re.match(r'([a-zA-Z/]+[a-zA-Z])', device_name)
-    if match:
-        return match.group(1)
-    
-    # If no pattern matches, return the original
-    return device_name
+        
+        # If no pattern matches, return the original
+        return device_name
+        
+    except (re.error, AttributeError) as e:
+        logging.error(f"Regex error processing device name '{device_name}': {str(e)}")
+        return device_name
+    except TypeError:
+        logging.error(f"Invalid device name type: expected string, got {type(device_name)}")
+        return str(device_name) if device_name is not None else ""
