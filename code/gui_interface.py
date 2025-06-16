@@ -220,28 +220,16 @@ class DiskEraserGUI:
             self.update_gui_log("No disks found.")
             return
         
-        # Get active device(s) - can return a string (LVM path or disk) or a list of disks
+        # Get active device(s) - now always returns a list or None with LVM resolution built-in
         active_device = get_active_disk()
         active_physical_drives = set()
         
         if active_device:
-            # Handle if get_active_disk() returns a list (regular disks)
-            if isinstance(active_device, list):
-                for dev in active_device:
-                    active_physical_drives.add(get_base_disk(dev))
-                log_info(f"Active physical devices: {active_physical_drives}")
-            # Handle if get_active_disk() returns a string (LVM or single disk)
-            elif isinstance(active_device, str):
-                if active_device.startswith('/dev/'):
-                    # Logical volume, map to physical drives
-                    active_physical_drives = get_physical_drives_for_logical_volumes([active_device])
-                    log_info(f"Active logical device: {active_device}")
-                    log_info(f"Mapped to physical drives: {active_physical_drives}")
-                else:
-                    # Already a disk name
-                    active_physical_drives.add(get_base_disk(active_device))
-                    log_info(f"Active physical device: {active_device}")
-                    log_info(f"Active physical drives: {active_physical_drives}")
+            # get_active_disk() now always returns a list of physical disk names with LVM already resolved
+            for dev in active_device:
+                active_physical_drives.add(get_base_disk(dev))
+            log_info(f"Active physical devices: {active_physical_drives}")
+            
             # Set disclaimer if we found an active disk
             if active_physical_drives:
                 self.disclaimer_var.set(
@@ -323,8 +311,8 @@ class DiskEraserGUI:
             disk_details_label.pack(side=tk.LEFT, fill=tk.X)
             
             # Add a separator between disk entries for better visual separation
-            ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)
-
+            ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)   
+    
     def start_erasure(self) -> None:
         # Get selected disks
         selected_disks = [disk for disk, var in self.disk_vars.items() if var.get()]
