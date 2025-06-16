@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from subprocess import CalledProcessError, SubprocessError
 from disk_erase import get_disk_serial, is_ssd
 from disk_operations import get_active_disk, process_disk
-from utils import get_disk_list, choose_filesystem, get_physical_drives_for_logical_volumes, get_base_disk
+from utils import get_disk_list, choose_filesystem, get_base_disk
 from log_handler import log_info, log_error
 
 def print_disk_details(disk):
@@ -26,18 +26,13 @@ def print_disk_details(disk):
         
         is_active = False
         if active_disks:
-            if isinstance(active_disks, str):
-                # LVM case - map logical volume to physical drives
-                physical_drives = get_physical_drives_for_logical_volumes([active_disks])
-                # Check if current disk is one of the physical drives
-                base_disk = get_base_disk(disk)
-                is_active = base_disk in physical_drives
-            elif isinstance(active_disks, list):
-                # Regular disk case - check if disk is in the active list
-                for active_disk in active_disks:
-                    if active_disk in disk:
-                        is_active = True
-                        break
+            # get_active_disk() now always returns a list of physical disk names with LVM already resolved
+            base_disk = get_base_disk(disk)
+            for active_disk in active_disks:
+                active_base_disk = get_base_disk(active_disk)
+                if base_disk == active_base_disk:
+                    is_active = True
+                    break
         
         print(f"Disk: /dev/{disk}")
         print(f"  Serial/ID: {disk_id}")
