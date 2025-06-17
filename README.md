@@ -1,7 +1,7 @@
 # Disk Eraser - Secure Disk Wiping and Formatting Tool 💽
 
 <div style="display: flex; align-items: center;">
-  <img src="./background" alt="Logo" width="120" style="margin-right: 20px;">
+  <img src="./img/background" alt="Logo" width="120" style="margin-right: 20px;">
   <p>
     <b>Disk Eraser</b> is a tool for securely erasing data from storage devices while providing the option to format with your chosen file system (EXT4, NTFS, or VFAT). It supports parallel disk erasure with configurable overwrite passes for thorough data sanitization.
   </p>
@@ -37,6 +37,7 @@
 
 - **Dual Interface**: CLI and GUI modes for flexibility
 - **Smart Device Detection**: Automatically identifies SSDs vs HDDs
+- **LVM Support**: Handles LVM disk management
 - **Secure Erasure Methods**:
   - Multiple overwrite passes for HDDs
   - Cryptographic erasure for SSDs (random or zero fill)
@@ -47,6 +48,9 @@
 - **Multiple Deployment Options**: Run as Python code, Linux command, or bootable ISO
 - **Improved disks listing format in GUI mode**: Prompts useful data about disks detected
 
+<div style="display: flex; align-items: center;">
+  <img src="./img/gui" alt="GUI" width="600" style="margin-right: 20px;">
+</div>
 ---
 
 ## Prerequisites 📋
@@ -97,7 +101,7 @@ sudo diskeraser --cli     # CLI mode
    ```
    - Pre-built ISO
 
-   Download pre-built: [Disk Eraser ISO v5.1](https://archive.org/details/diskEraser-V5.1)
+   Download pre-built: [Disk Eraser ISO v5.2](https://archive.org/details/diskEraser-V5.2)
 
 2. **Flash to USB**:
    ```bash

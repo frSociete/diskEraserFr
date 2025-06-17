@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from subprocess import CalledProcessError, SubprocessError
 from disk_erase import get_disk_serial, is_ssd
-from utils import get_disk_list
+from utils import get_disk_list, get_physical_drives_for_logical_volumes, get_base_disk
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from log_handler import log_info, log_error, blank
 from disk_operations import get_active_disk, process_disk
@@ -201,8 +201,7 @@ class DiskEraserGUI:
         """Toggle fullscreen mode"""
         is_fullscreen = self.root.attributes("-fullscreen")
         self.root.attributes("-fullscreen", not is_fullscreen)
-    
-        
+
     def refresh_disks(self) -> None:
         # Clear existing disk checkboxes
         for widget in self.scrollable_disk_frame.winfo_children():
@@ -220,10 +219,25 @@ class DiskEraserGUI:
             self.ssd_disclaimer_var.set("")
             self.update_gui_log("No disks found.")
             return
+        
+        # Get active device(s) - now always returns a list or None with LVM resolution built-in
+        active_device = get_active_disk()
+        active_physical_drives = set()
+        
+        if active_device:
+            # get_active_disk() now always returns a list of physical disk names with LVM already resolved
+            for dev in active_device:
+                active_physical_drives.add(get_base_disk(dev))
+            log_info(f"Active physical devices: {active_physical_drives}")
             
-        # Set disclaimer if we found an active disk
-        if self.active_disk:
-            self.disclaimer_var.set(f"WARNING: Disk marked in red contains the active filesystem. Erasing this disk will cause system failure and data loss!")
+            # Set disclaimer if we found an active disk
+            if active_physical_drives:
+                self.disclaimer_var.set(
+                    "WARNING: Disk marked in red contains the active filesystem. "
+                    "Erasing this disk will cause system failure and data loss!"
+                )
+            else:
+                self.disclaimer_var.set("")
         else:
             self.disclaimer_var.set("")
         
@@ -236,7 +250,11 @@ class DiskEraserGUI:
                 break
                 
         if has_ssd:
-            self.ssd_disclaimer_var.set("WARNING: SSD devices detected. Multiple-pass erasure may damage SSDs and NOT achieve secure data deletion due to SSD wear leveling. For SSDs, use cryptographic erase mode instead.")
+            self.ssd_disclaimer_var.set(
+                "WARNING: SSD devices detected. Multiple-pass erasure may damage SSDs "
+                "and NOT achieve secure data deletion due to SSD wear leveling. "
+                "For SSDs, use cryptographic erase mode instead."
+            )
         else:
             self.ssd_disclaimer_var.set("")
         
@@ -263,7 +281,8 @@ class DiskEraserGUI:
             ssd_indicator = " (SSD)" if is_device_ssd else " (HDD)"
             
             # Determine if this is the active disk
-            is_active = self.active_disk and any(active_disk in device_name for active_disk in self.active_disk)
+            base_device_name = get_base_disk(device_name)
+            is_active = base_device_name in active_physical_drives
             active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
             
             # Set text color
@@ -292,7 +311,7 @@ class DiskEraserGUI:
             disk_details_label.pack(side=tk.LEFT, fill=tk.X)
             
             # Add a separator between disk entries for better visual separation
-            ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)
+            ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)   
     
     def start_erasure(self) -> None:
         # Get selected disks

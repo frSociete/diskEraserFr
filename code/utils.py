@@ -85,7 +85,6 @@ def get_disk_list() -> list[dict]:
                     "size": size,
                     "model": model
                 })
-        
         return disks
     except FileNotFoundError as e:
         logging.error(f"Error: Command not found: {str(e)}")
@@ -124,3 +123,115 @@ def choose_filesystem() -> str:
             logging.error("Filesystem selection interrupted by user (Ctrl+C)")
             print("\nFilesystem selection interrupted by user (Ctrl+C)")
             sys.exit(130)
+        except EOFError:
+            logging.error("Input stream closed unexpectedly")
+            print("\nInput stream closed unexpectedly")
+            sys.exit(1)
+
+
+def get_physical_drives_for_logical_volumes(active_devices: list) -> set:
+    """
+    Map logical volumes (LVM, etc.) to their underlying physical drives.
+    
+    Args:
+        active_devices: List of active device paths (e.g., ['/dev/mapper/rocket--vg-root'])
+    
+    Returns:
+        Set of physical drive names (e.g., {'nvme0n1', 'sda'})
+    """
+    if not active_devices:
+        return set()
+    
+    physical_drives = set()
+    
+    try:
+        # Get all physical drives from disk list
+        disk_list = get_disk_list()
+        physical_device_names = [disk['device'].replace('/dev/', '') for disk in disk_list]
+        
+        for physical_device in physical_device_names:
+            try:
+                # Use lsblk to get the complete device tree for this physical drive
+                # -o NAME shows device names, -l shows in list format, -n removes headers
+                output = run_command([
+                    "lsblk", 
+                    f"/dev/{physical_device}", 
+                    "-o", "NAME", 
+                    "-l", 
+                    "-n"
+                ])
+                
+                # Parse the output to get all devices in the tree
+                device_tree = []
+                for line in output.strip().split('\n'):
+                    if line.strip():
+                        device_name = line.strip()
+                        # Add both with and without /dev/ prefix for comparison
+                        device_tree.append(f"/dev/{device_name}")
+                        device_tree.append(device_name)
+                
+                # Check if any active device is in this physical drive's tree
+                for active_device in active_devices:
+                    # Handle different formats of device names
+                    active_variants = [
+                        active_device,
+                        active_device.replace('/dev/', ''),
+                        active_device.replace('/dev/mapper/', '')
+                    ]
+                    
+                    # Check if any variant of the active device is in the device tree
+                    for variant in active_variants:
+                        if variant in device_tree:
+                            physical_drives.add(physical_device)
+                            logging.info(f"Found active device '{active_device}' on physical drive '{physical_device}'")
+                            break
+                    
+                    if physical_device in physical_drives:
+                        break
+                        
+            except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                # Skip this physical device if lsblk fails
+                logging.error(f"Could not query device tree for {physical_device}: {str(e)}")
+                continue
+                
+    except (AttributeError, TypeError) as e:
+        logging.error(f"Error processing device data structures: {str(e)}")
+    except MemoryError:
+        logging.error("Insufficient memory to process logical volume mapping")
+    except OSError as e:
+        logging.error(f"OS error during logical volume mapping: {str(e)}")
+    
+    return physical_drives
+
+
+def get_base_disk(device_name: str) -> str:
+    """
+    Extract base disk name from a device name.
+    Examples: 
+        'nvme0n1p1' -> 'nvme0n1'
+        'sda1' -> 'sda'
+        'nvme0n1' -> 'nvme0n1'
+    """
+    import re
+    
+    try:
+        # Handle nvme devices (e.g., nvme0n1p1 -> nvme0n1)
+        if 'nvme' in device_name:
+            match = re.match(r'(nvme\d+n\d+)', device_name)
+            if match:
+                return match.group(1)
+        
+        # Handle traditional devices (e.g., sda1 -> sda)
+        match = re.match(r'([a-zA-Z/]+[a-zA-Z])', device_name)
+        if match:
+            return match.group(1)
+        
+        # If no pattern matches, return the original
+        return device_name
+        
+    except (re.error, AttributeError) as e:
+        logging.error(f"Regex error processing device name '{device_name}': {str(e)}")
+        return device_name
+    except TypeError:
+        logging.error(f"Invalid device name type: expected string, got {type(device_name)}")
+        return str(device_name) if device_name is not None else ""
