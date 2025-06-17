@@ -136,6 +136,8 @@ def get_active_disk():
         # Step 1: Check /proc/mounts for all mounted devices
         with open('/proc/mounts', 'r') as f:
             mounts_content = f.read()
+            #log_info("Analyzing /proc/mounts content:")
+            #log_info(mounts_content[:500] + "..." if len(mounts_content) > 500 else mounts_content)
             
             # Look for root filesystem mount
             root_device = None
@@ -144,6 +146,7 @@ def get_active_disk():
                     parts = line.split()
                     if len(parts) >= 2:
                         root_device = parts[0]
+                        #log_info(f"Found root mount: {line.strip()}")
                         break
 
         # Step 2: Handle special live boot cases where root is not a real device
@@ -171,6 +174,8 @@ def get_active_disk():
                                 match = re.search(r'/dev/([a-zA-Z]+)', device)
                                 if match:
                                     devices.add(match.group(1))
+                                    #log_info(f"Found potential boot device: {match.group(1)} at {mount_point}")
+            
             
             # If we still haven't found anything, fall back to df command analysis
             if not devices:
@@ -230,7 +235,7 @@ def get_active_disk():
                             if match:
                                 devices.add(match.group(1))
                                 live_boot_found = True
-                                log_info(f"Found live boot device: {match.group(1)}")
+                                #log_info(f"Found live boot device: {match.group(1)}")
             except (FileNotFoundError, CalledProcessError) as e:
                 log_info(f"Could not check for live boot devices: {str(e)}")
 
