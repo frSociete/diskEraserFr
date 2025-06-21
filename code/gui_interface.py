@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from subprocess import CalledProcessError, SubprocessError
 from disk_erase import get_disk_serial, is_ssd
-from utils import get_disk_list
+from utils import get_disk_list, get_physical_drives_for_logical_volumes, get_base_disk
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from log_handler import log_info, log_error, blank
 from disk_operations import get_active_disk, process_disk
@@ -201,8 +201,7 @@ class DiskEraserGUI:
         """Toggle fullscreen mode"""
         is_fullscreen = self.root.attributes("-fullscreen")
         self.root.attributes("-fullscreen", not is_fullscreen)
-    
-        
+
     def refresh_disks(self) -> None:
         # Clear existing disk checkboxes
         for widget in self.scrollable_disk_frame.winfo_children():
@@ -220,10 +219,21 @@ class DiskEraserGUI:
             self.ssd_disclaimer_var.set("")
             self.update_gui_log("Aucun disque trouvé.")
             return
+        
+        # Get active device(s) - now always returns a list or None with LVM resolution built-in
+        active_device = get_active_disk()
+        active_physical_drives = set()
+        
+        if active_device:
+            # get_active_disk() now always returns a list of physical disk names with LVM already resolved
+            for dev in active_device:
+                active_physical_drives.add(get_base_disk(dev))
+            log_info(f"Active physical devices: {active_physical_drives}")
             
         # Set disclaimer if we found an active disk
-        if self.active_disk:
+        if active_physical_drives:
             self.disclaimer_var.set(f"ATTENTION : Le disque marqué en rouge contient le système de fichiers actif. L'effacement de ce disque est bloqué pour éviter une défaillance du système et une perte de données !")
+
         else:
             self.disclaimer_var.set("")
         
@@ -237,6 +247,7 @@ class DiskEraserGUI:
                 
         if has_ssd:
             self.ssd_disclaimer_var.set("ATTENTION : Périphériques SSD détectés. L'effacement en plusieurs passes peut endommager les SSD et NE PAS réussir à supprimer les données en toute sécurité en raison de la répartition d'usure des SSD. Pour les SSD, utilisez le mode d'effacement cryptographique.")
+
         else:
             self.ssd_disclaimer_var.set("")
         
@@ -260,14 +271,15 @@ class DiskEraserGUI:
             is_device_ssd = is_ssd(device_name)
             ssd_indicator = " (SSD)" if is_device_ssd else " (HDD)"
             
-
-            # Set the text color to red if this is the active disk
-            is_active = self.active_disk and any(disk in device_name for disk in self.active_disk)
-
-            text_color = "red" if is_active else "blue" if is_device_ssd else "black"
+            # Determine if this is the active disk
+            base_device_name = get_base_disk(device_name)
+            is_active = base_device_name in active_physical_drives
             active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
+            
+            # Set text color
+            text_color = "red" if is_active else "blue" if is_device_ssd else "black"
 
-                        # Create the checkbox and set state based on if it's an active disk
+            # Create the checkbox and set state based on if it's an active disk
             cb = ttk.Checkbutton(checkbox_row, variable=var, state="disabled" if is_active else "normal")
             # Make sure we can't select the active disk
             if is_active:
@@ -298,7 +310,7 @@ class DiskEraserGUI:
             disk_details_label.pack(side=tk.LEFT, fill=tk.X)
             
             # Add a separator between disk entries for better visual separation
-            ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)
+            ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)   
     
     def start_erasure(self) -> None:
         # Get selected disks
@@ -330,14 +342,14 @@ class DiskEraserGUI:
                     break
                     
             if ssd_selected:
-                if not messagebox.askyesno("ATTENTION - PÉRIPHÉRIQUE SSD SÉLECTIONNÉ", 
-                                          "ATTENTION : Vous avez sélectionné un ou plusieurs périphériques SSD !\n\n"
-                                          "L'utilisation d'un effacement en plusieurs passes sur les SSD peut :\n"
-                                          "• Endommager le SSD en provoquant une usure excessive\n"
-                                          "• Ne pas réussir à effacer les données en toute sécurité en raison de la répartition d'usure des SSD\n"
-                                          "• Ne pas écraser tous les secteurs en raison du sur-provisionnement\n\n"
-                                          "Pour les SSD, les outils d'effacement sécurisé fournis par le fabricant sont recommandés.\n\n"
-                                          "Voulez-vous quand même continuer ?",
+                if not messagebox.askyesno("WARNING - SSD DEVICE SELECTED", 
+                                          "WARNING: You have selected one or more SSD devices!\n\n"
+                                          "Using multiple-pass erasure on SSDs can:\n"
+                                          "• Damage the SSD by causing excessive wear\n"
+                                          "• Fail to securely erase data due to SSD wear leveling\n"
+                                          "• Not overwrite all sectors due to over-provisioning\n\n"
+                                          "For SSDs, use cryptographic erasure \n\n"
+                                          "Do you still want to continue?",
                                           icon="warning"):
                     return
         
