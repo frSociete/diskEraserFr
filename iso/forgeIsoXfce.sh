@@ -6,7 +6,7 @@ set -e
 # Variables
 ISO_NAME="secure_disk_eraser.iso"
 WORK_DIR="$HOME/debian-live-build"
-CODE_DIR="$HOME/diskEraser/code"
+CODE_DIR="$HOME/diskEraserFr/code"
 
 # Install necessary tools
 echo "Installing live-build and required dependencies..."
