@@ -162,7 +162,7 @@ def get_active_disk():
                         
                         # Look for common live boot mount points
                         if any(keyword in mount_point for keyword in ['/run/live', '/lib/live', '/live/', '/cdrom']):
-                            match = re.search(r'/dev/([a-zA-Z]+)', device)
+                            match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                             if match:
                                 devices.add(match.group(1))
                                 live_boot_found = True
@@ -171,7 +171,7 @@ def get_active_disk():
                         elif device.startswith('/dev/') and any(keyword in device for keyword in ['sd', 'nvme', 'mmc']):
                             # Check if this looks like a removable device by checking mount point
                             if '/media' in mount_point or '/mnt' in mount_point or '/run' in mount_point:
-                                match = re.search(r'/dev/([a-zA-Z]+)', device)
+                                match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                                 if match:
                                     devices.add(match.group(1))
                                     #log_info(f"Found potential boot device: {match.group(1)} at {mount_point}")
@@ -192,7 +192,7 @@ def get_active_disk():
                             
                             # Look for any mounted storage devices
                             if device.startswith('/dev/') and any(keyword in device for keyword in ['sd', 'nvme', 'mmc']):
-                                match = re.search(r'/dev/([a-zA-Z]+)', device)
+                                match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                                 if match:
                                     devices.add(match.group(1))
                 except (FileNotFoundError, CalledProcessError) as e:
@@ -213,8 +213,8 @@ def get_active_disk():
                     devices.add(get_base_disk(drive))
                     
             else:
-                # Regular disk - extract device name
-                match = re.search(r'/dev/([a-zA-Z]+)', root_device)
+                # Regular disk - extract device name with improved regex for NVMe
+                match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', root_device)
                 if match:
                     devices.add(match.group(1))
             
@@ -231,7 +231,7 @@ def get_active_disk():
                         
                         # Check for live boot mount points
                         if "/run/live" in mount_point or "/lib/live" in mount_point:
-                            match = re.search(r'/dev/([a-zA-Z]+)', device)
+                            match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                             if match:
                                 devices.add(match.group(1))
                                 live_boot_found = True
