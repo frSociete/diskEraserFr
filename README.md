@@ -93,7 +93,7 @@ sudo diskeraser --cli     # Mode CLI
    cd diskEraser/iso && make
    ```
 
-   Ou téléchargez la version précompilée : [Disk Eraser ISO v4.0](https://archive.org/details/diskEraser-V5)
+   Ou téléchargez la version précompilée : [Disk Eraser ISO v5.2](https://archive.org/download/diskEraser-V5.2/activeDiskDeletionBlockedVersionFr/diskEraserFr-V5.2.iso)
 
 
 2. **Flasher sur USB** :
