@@ -4,7 +4,7 @@
 set -e
 
 # Variables
-ISO_NAME="secure_disk_eraser.iso"
+ISO_NAME="diskEraserKde-V5.2.iso"
 WORK_DIR="$HOME/debian-live-build"
 CODE_DIR="$HOME/diskEraser/code"
 
