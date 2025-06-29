@@ -1,7 +1,7 @@
 # Disk Eraser - Outil de Nettoyage et Formatage Sécurisé de Disques 💽
 
 <div style="display: flex; align-items: center;">
-  <img src="./background" alt="Logo" width="120" style="margin-right: 20px;">
+  <img src="./img/background" alt="Logo" width="120" style="margin-right: 20px;">
   <p>
     <b>Disk Eraser</b> est un outil pour effacer de manière sécurisée les données des périphériques de stockage tout en offrant la possibilité de formater avec le système de fichiers de votre choix (EXT4, NTFS ou VFAT). Il prend en charge l'effacement parallèle des disques avec des passages d'écrasement configurables pour une désinfection approfondie des données.
   </p>
@@ -36,6 +36,7 @@
 ## Fonctionnalités ✨
 
 - **Double Interface** : Modes CLI et GUI pour plus de flexibilité
+- **SUpport LVM**: Prise en charge des volumes LVM dans la détection des disques physiques
 - **Détection Intelligente des Appareils** : Identifie automatiquement les SSD et HDD
 - **Méthodes d'Effacement Sécurisé** :
   - Passages multiples d'écrasement pour les HDD
@@ -46,6 +47,9 @@
 - **Formats Flexibles** : Prend en charge les systèmes de fichiers NTFS, EXT4 et VFAT
 - **Options de Déploiement Multiples** : Exécution en tant que code Python, commande Linux ou ISO amorçable
 
+<div style="display: flex; align-items: center;">
+  <img src="./img/gui" alt="GUI" width="600" style="margin-right: 20px;">
+</div>
 ---
 
 ## Prérequis 📋
