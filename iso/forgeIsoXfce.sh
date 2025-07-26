@@ -4,9 +4,10 @@
 set -e
 
 # Variables
-ISO_NAME="diskEraser-v5.3.iso"
+
+ISO_NAME="diskEraserFr-V5.2.iso"
 WORK_DIR="$HOME/debian-live-build"
-CODE_DIR="$HOME/diskEraser/code"
+CODE_DIR="$HOME/diskEraserFr/code"
 
 # Install necessary tools
 echo "Installing live-build and required dependencies..."
