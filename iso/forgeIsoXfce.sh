@@ -108,6 +108,26 @@ mkdir -p config/includes.chroot/etc/sudoers.d/
 echo "user ALL=(ALL) NOPASSWD: ALL" > config/includes.chroot/etc/sudoers.d/passwordless
 chmod 0440 config/includes.chroot/etc/sudoers.d/passwordless
 
+# Create USB flash drive udev rules
+echo "Creating USB flash drive udev rules..."
+mkdir -p config/includes.chroot/etc/udev/rules.d/
+cat << 'EOF' > config/includes.chroot/etc/udev/rules.d/usb-flash.rules
+# Try to catch USB flash drives and set them as non-rotational. Probably no impact whatsoever : /
+# c.f. https://mpdesouza.com/blog/kernel-adventures-are-usb-sticks-rotational-devices/
+
+# Device is already marked as non-rotational, skip over it
+ATTR{queue/rotational}=="0", GOTO="skip"
+
+# Device has some sort of queue support, likely to be an HDD actually
+ATTRS{queue_type}!="none", GOTO="skip"
+
+# Flip the rotational bit on this removable device and give audible signs of having caught a match
+ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", ATTR{queue/rotational}="0"
+ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/bin/beep -f 70 -r 2"
+
+LABEL="skip"
+EOF
+
 # Create application launcher for the installed version
 echo "Creating application launcher..."
 mkdir -p config/includes.chroot/usr/share/applications/
