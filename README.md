@@ -78,7 +78,7 @@ sudo systemctl restart systemd-udevd
 ## Features ✨
 
 - **Dual Interface**: CLI and GUI modes for flexibility
-- **Smart Device Detection**: Automatically identifies SSDs vs HDDs
+- **Smart Device Detection**: Automatically identifies electronic vs mechanical devices
 - **LVM Support**: Handles LVM disk management
 - **Secure Erasure Methods**:
   - Multiple overwrite passes for HDDs
@@ -143,7 +143,7 @@ sudo diskeraser --cli     # CLI mode
    ```
    - Pre-built ISO
 
-   Download pre-built: [Disk Eraser ISO v5.2](https://archive.org/details/diskEraser-V5.2)
+   Download pre-built: [Disk Eraser ISO v5.3](https://archive.org/details/diskEraser-v5.3)
 
 2. **Flash to USB**:
    ```bash
