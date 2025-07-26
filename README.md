@@ -21,22 +21,64 @@
   - **Zero Fill**: Quick erasure by writing zeros to all addressable locations
 - Works with ATA Secure Erase for compatible devices
 
-> ⚠️ **SSD COMPATIBILITY WARNING**
-> 
-> While this tool can detect and work with SSDs, please note:
-> 
-> - **SSD Wear Leveling**: Makes traditional overwrite methods less effective
-> - **Over-provisioning**: Hidden reserved space may retain data
-> - **Device Lifespan**: Multiple passes can reduce SSD longevity
-> 
-> For SSDs, cryptographic erasure methods are recommended over multiple overwrite passes.
+⚠️ **SSD COMPATIBILITY WARNING**
+
+While this tool can detect and work with SSDs, please note:
+
+- **SSD Wear Leveling**: Makes traditional overwrite methods less effective
+- **Over-provisioning**: Hidden reserved space may retain data
+- **Device Lifespan**: Multiple passes can reduce SSD longevity
+ 
+For SSDs, cryptographic erasure methods are recommended over multiple overwrite passes.
+
+⚠️ **USB FLASH DRIVE PERFORMANCE WARNING**
+ 
+The Linux kernel often incorrectly marks USB flash drives as rotational devices, which can significantly impact performance during erasure operations. This is a known kernel issue affecting USB storage devices.
+ 
+**To fix this issue when NOT using the custom ISO**, create the following udev rule:
+
+This rule is available on stackexchange : [Solution from stackexchange](https://unix.stackexchange.com/questions/439109/set-usb-flash-drive-as-non-rotational-drive)
+
+1. Create the file `/etc/udev/rules.d/usb-flash.rules` with root privileges:
+```bash
+sudo nano /etc/udev/rules.d/usb-flash.rules
+```
+
+2. Add the following content:
+
+```bash
+# Try to catch USB flash drives and set them as non-rotational
+# c.f. https://mpdesouza.com/blog/kernel-adventures-are-usb-sticks-rotational-devices/
+
+# Device is already marked as non-rotational, skip over it
+ATTR{queue/rotational}=="0", GOTO="skip"
+
+# Device has some sort of queue support, likely to be an HDD actually
+ATTRS{queue_type}!="none", GOTO="skip"
+
+# Flip the rotational bit on this removable device and give audible signs of having caught a match
+ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", ATTR{queue/rotational}="0"
+ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/bin/beep -f 70 -r 2"
+
+LABEL="skip"
+```
+
+3. Reload udev rules and restart the udev service:
+```bash
+sudo udevadm control --reload-rules
+sudo systemctl restart systemd-udevd
+```
+ 
+4. Reconnect your USB flash drives to apply the new rules.
+
+**Note**: The custom ISO images already include these optimization rules.
 
 ---
 
 ## Features ✨
 
 - **Dual Interface**: CLI and GUI modes for flexibility
-- **Smart Device Detection**: Automatically identifies SSDs vs HDDs
+- **Smart Device Detection**: Automatically identifies electronic vs mechanical devices
 - **LVM Support**: Handles LVM disk management
 - **Secure Erasure Methods**:
   - Multiple overwrite passes for HDDs
@@ -101,7 +143,7 @@ sudo diskeraser --cli     # CLI mode
    ```
    - Pre-built ISO
 
-   Download pre-built: [Disk Eraser ISO v5.2](https://archive.org/details/diskEraser-V5.2)
+   Download pre-built: [Disk Eraser ISO v5.3](https://archive.org/details/diskEraser-v5.3)
 
 2. **Flash to USB**:
    ```bash

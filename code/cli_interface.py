@@ -37,7 +37,7 @@ def print_disk_details(disk):
         print(f"Disk: /dev/{disk}")
         print(f"  Serial/ID: {disk_id}")
         print(f"  Size: {disk_size}")
-        print(f"  Type: {'SSD' if is_disk_ssd else 'HDD'}")
+        print(f"  Type: {'Solid_state' if is_disk_ssd else 'Mechanical'}")
         print(f"  Status: {'ACTIVE SYSTEM DISK - DANGER!' if is_active else 'Safe to erase'}")
         
         if is_disk_ssd:

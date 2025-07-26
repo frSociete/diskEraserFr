@@ -278,7 +278,7 @@ class DiskEraserGUI:
             device_name = disk['device'].replace('/dev/', '')
             disk_identifier = get_disk_serial(device_name)
             is_device_ssd = is_ssd(device_name)
-            ssd_indicator = " (SSD)" if is_device_ssd else " (HDD)"
+            ssd_indicator = " (Solid_state)" if is_device_ssd else " (Mechanical)"
             
             # Determine if this is the active disk
             base_device_name = get_base_disk(device_name)
