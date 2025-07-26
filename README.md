@@ -21,6 +21,7 @@
   - **Remplissage à Zéro** : Effacement rapide en écrivant des zéros à tous les emplacements adressables
 - Fonctionne avec ATA Secure Erase pour les appareils compatibles
 
+
 > ⚠️ **AVERTISSEMENT DE COMPATIBILITÉ SSD**
 > 
 > Bien que cet outil puisse détecter et fonctionner avec les SSD, veuillez noter :
@@ -30,6 +31,44 @@
 > - **Durée de Vie de l'Appareil** : Les passages multiples peuvent réduire la longévité du SSD
 > 
 > Pour les SSD, les méthodes d'effacement cryptographique sont recommandées plutôt que les passages multiples d'écrasement.
+
+
+⚠️ **AVERTISSEMENT DE COMPATIBILITÉ DES CLÉS USB**
+
+Le noyau Linux marque souvent incorrectement les clés USB comme des périphériques rotatifs, ce qui peut considérablement impacter les performances lors des opérations d'effacement. Il s'agit d'un problème connu du noyau affectant les périphériques de stockage USB.
+
+**Pour corriger ce problème lorsque vous N'utilisez PAS l'ISO personnalisée**, créez la règle udev suivante :
+Cette règle est disponible sur stackexchange : [Solution de stackexchange](https://unix.stackexchange.com/questions/439109/set-usb-flash-drive-as-non-rotational-drive)
+
+1. Créez le fichier `/etc/udev/rules.d/usb-flash.rules` avec les privilèges root :
+```bash
+sudo nano /etc/udev/rules.d/usb-flash.rules
+```
+
+2. Ajoutez le contenu suivant :
+```bash
+# Tente de détecter les clés USB et les définir comme non-rotatives
+# c.f. https://mpdesouza.com/blog/kernel-adventures-are-usb-sticks-rotational-devices/
+# Le périphérique est déjà marqué comme non-rotatif, on l'ignore
+ATTR{queue/rotational}=="0", GOTO="skip"
+# Le périphérique a un certain type de support de file d'attente, probablement un vrai disque dur
+ATTRS{queue_type}!="none", GOTO="skip"
+# Inverse le bit rotatif sur ce périphérique amovible et donne des signaux audibles d'avoir trouvé une correspondance
+ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", ATTR{queue/rotational}="0"
+ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/bin/beep -f 70 -r 2"
+LABEL="skip"
+```
+
+3. Rechargez les règles udev et redémarrez le service udev :
+```bash
+sudo udevadm control --reload-rules
+sudo systemctl restart systemd-udevd
+```
+
+4. Reconnectez vos clés USB pour appliquer les nouvelles règles.
+
+**Note** : Les images ISO personnalisées incluent déjà ces règles d'optimisation.
+
 
 ---
 
@@ -46,6 +85,7 @@
 - **Configuration Post-Effacement** : Partitionnement et formatage automatiques
 - **Formats Flexibles** : Prend en charge les systèmes de fichiers NTFS, EXT4 et VFAT
 - **Options de Déploiement Multiples** : Exécution en tant que code Python, commande Linux ou ISO amorçable
+
 
 <div style="display: flex; align-items: center;">
   <img src="./img/gui" alt="GUI" width="600" style="margin-right: 20px;">
@@ -175,4 +215,3 @@ Selon les conditions suivantes :
 - **Attribution** : Fournir le crédit approprié
 - **Pas d'Utilisation Commerciale** : Pas d'utilisation à des fins commerciales
 - **Partage à l'Identique** : Distribuer les modifications sous la même licence
-

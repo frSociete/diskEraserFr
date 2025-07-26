@@ -34,6 +34,7 @@ def print_disk_details(disk):
                     is_active = True
                     break
         
+
         print(f"Disque: /dev/{disk}")
         print(f"  Numéro de série/ID: {disk_id}")
         print(f"  Taille: {disk_size}")
