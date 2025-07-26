@@ -5,7 +5,7 @@ set -e
 
 # Variables
 
-ISO_NAME="diskEraserKdeFr-V5.2.iso"
+ISO_NAME="diskEraserKdeFr-V5.3.iso"
 WORK_DIR="$HOME/debian-live-build"
 CODE_DIR="$HOME/diskEraserFr/code"
 
@@ -114,19 +114,15 @@ chmod 0440 config/includes.chroot/etc/sudoers.d/passwordless
 echo "Creating USB flash drive udev rules..."
 mkdir -p config/includes.chroot/etc/udev/rules.d/
 cat << 'EOF' > config/includes.chroot/etc/udev/rules.d/usb-flash.rules
-# Try to catch USB flash drives and set them as non-rotational. Probably no impact whatsoever : /
+# Tente de détecter les clés USB et les définir comme non-rotatives
 # c.f. https://mpdesouza.com/blog/kernel-adventures-are-usb-sticks-rotational-devices/
-
-# Device is already marked as non-rotational, skip over it
+# Le périphérique est déjà marqué comme non-rotatif, on l'ignore
 ATTR{queue/rotational}=="0", GOTO="skip"
-
-# Device has some sort of queue support, likely to be an HDD actually
+# Le périphérique a un certain type de support de file d'attente, probablement un vrai disque dur
 ATTRS{queue_type}!="none", GOTO="skip"
-
-# Flip the rotational bit on this removable device and give audible signs of having caught a match
+# Inverse le bit rotatif sur ce périphérique amovible et donne des signaux audibles d'avoir trouvé une correspondance
 ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", ATTR{queue/rotational}="0"
 ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/bin/beep -f 70 -r 2"
-
 LABEL="skip"
 EOF
 
