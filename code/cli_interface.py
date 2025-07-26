@@ -20,8 +20,8 @@ def print_disk_details(disk):
         disk_size = "Inconnu"
         available_disks = get_disk_list()
         for available_disk in available_disks:
-            if available_disk["device"] == f"/dev/{disk}":
-                disk_size = available_disk["size"]
+            if available_disk["Appareil"] == f"/dev/{disk}":
+                disk_size = available_disk["Taille"]
                 break
         
         is_active = False
@@ -65,7 +65,7 @@ def select_disks() -> list[str]:
     try:
 
         available_disks = get_disk_list()
-        disk_names = [disk["device"].replace("/dev/", "") for disk in available_disks]
+        disk_names = [disk["Appareil"].replace("/dev/", "") for disk in available_disks]
 
         # Then iterate over disk_names
         for disk in disk_names:

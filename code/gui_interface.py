@@ -240,7 +240,7 @@ class DiskEraserGUI:
         # Check if any SSDs are present and set the SSD disclaimer
         has_ssd = False
         for disk in self.disks:
-            device_name = disk['device'].replace('/dev/', '')
+            device_name = disk['Appareil'].replace('/dev/', '')
             if is_ssd(device_name):
                 has_ssd = True
                 break
@@ -262,11 +262,11 @@ class DiskEraserGUI:
             checkbox_row.pack(fill=tk.X)
             
             var = tk.BooleanVar(value=False)
-            self.disk_vars[disk['device']] = var
+            self.disk_vars[disk['Appareil']] = var
             
             
             # Get disk information
-            device_name = disk['device'].replace('/dev/', '')
+            device_name = disk['Appareil'].replace('/dev/', '')
             disk_identifier = get_disk_serial(device_name)
             is_device_ssd = is_ssd(device_name)
             ssd_indicator = " (Solid_state)" if is_device_ssd else " (Mechanical)"
@@ -303,7 +303,7 @@ class DiskEraserGUI:
             # Create disk details label
             disk_details_label = ttk.Label(
                 details_row,
-                text=f"Size: {disk['size']} - Model: {disk['model']}",
+                text=f"Taille: {disk['Taille']} - Modèle: {disk['Modèle']}",
                 wraplength=300,
                 foreground=text_color
             )
