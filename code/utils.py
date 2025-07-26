@@ -81,9 +81,9 @@ def get_disk_list() -> list[dict]:
                 model = parts[3] if len(parts) > 3 else "Unknown"
                 
                 disks.append({
-                    "device": f"/dev/{device}",
-                    "size": size,
-                    "model": model
+                    "Disque": f"/dev/{device}",
+                    "Taille": size,
+                    "Modèle": model
                 })
         return disks
     except FileNotFoundError as e:
