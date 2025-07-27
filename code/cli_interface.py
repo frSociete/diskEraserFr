@@ -38,11 +38,11 @@ def print_disk_details(disk):
         print(f"Disque: /dev/{disk}")
         print(f"  Numéro de série/ID: {disk_id}")
         print(f"  Taille: {disk_size}")
-        print(f"  Type: {'SSD' if is_disk_ssd else 'HDD'}")
+        print(f"  Type: {'Electronique' if is_disk_ssd else 'Mécanique'}")
         print(f"  Statut: {'DISQUE SYSTÈME ACTIF - DANGER!' if is_active else 'Effacement sans risque'}")
         
         if is_disk_ssd:
-            print("  AVERTISSEMENT: Ceci est un périphérique SSD. L'effacement sécurisé à passages multiples:")
+            print("  AVERTISSEMENT: Ceci est un périphérique electronique. L'effacement sécurisé à passages multiples:")
             print("    • Peut endommager le SSD en provoquant une usure excessive")
             print("    • Peut ne pas effacer en toute sécurité toutes les données en raison de la répartition d'usure du SSD")
             print("    • Peut ne pas réécrire tous les secteurs en raison du sur-provisionnement")

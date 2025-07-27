@@ -246,7 +246,7 @@ class DiskEraserGUI:
                 break
                 
         if has_ssd:
-            self.ssd_disclaimer_var.set("ATTENTION : Périphériques SSD détectés. L'effacement en plusieurs passes peut endommager les SSD et NE PAS réussir à supprimer les données en toute sécurité en raison de la répartition d'usure des SSD. Pour les SSD, utilisez le mode d'effacement cryptographique.")
+            self.ssd_disclaimer_var.set("ATTENTION : Périphériques electroniques détectés. L'effacement en plusieurs passes peut endommager les disques electroniques et NE PAS réussir à supprimer les données en toute sécurité en raison de la répartition d'usure des SSD. Pour les disques electroniques, utilisez le mode d'effacement cryptographique.")
 
         else:
             self.ssd_disclaimer_var.set("")
@@ -269,7 +269,7 @@ class DiskEraserGUI:
             device_name = disk['Appareil'].replace('/dev/', '')
             disk_identifier = get_disk_serial(device_name)
             is_device_ssd = is_ssd(device_name)
-            ssd_indicator = " (Solid_state)" if is_device_ssd else " (Mechanical)"
+            ssd_indicator = " (Electronique)" if is_device_ssd else " (Mécanique)"
             
             # Determine if this is the active disk
             base_device_name = get_base_disk(device_name)
