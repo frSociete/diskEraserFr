@@ -4,9 +4,9 @@
 set -e
 
 # Variables
-ISO_NAME="diskEraserKde-v5.3.iso"
-WORK_DIR="$HOME/debian-live-build"
-CODE_DIR="$HOME/diskEraser/code"
+ISO_NAME="$(pwd)/diskEraserKde-v5.3.iso"
+WORK_DIR="$(pwd)/debian-live-build"
+CODE_DIR="$(pwd)/../code"
 
 # Install necessary tools
 echo "Installing live-build and required dependencies..."
@@ -238,7 +238,7 @@ echo "Building the ISO..."
 sudo lb build
 
 # Move the ISO
-mv live-image-amd64.hybrid.iso "$HOME/$ISO_NAME"
+mv live-image-amd64.hybrid.iso "$ISO_NAME"
 
 # Cleanup
 sudo lb clean
