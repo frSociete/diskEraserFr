@@ -41,16 +41,15 @@ def print_disk_details(disk):
                 if base_disk == active_base_disk:
                     is_active = True
                     break
-        
 
         print(f"Disque: /dev/{disk}")
         print(f"  Numéro de série/ID: {disk_id}")
         print(f"  Taille: {disk_size}")
-        print(f"  Type: {'Electronique' if is_disk_ssd else 'Mécanique'}")
+        print(f"  Type: {'Électronique' if is_disk_ssd else 'Mécanique'}")
         print(f"  Statut: {'DISQUE SYSTÈME ACTIF - DANGER!' if is_active else 'Effacement sans risque'}")
         
         if is_disk_ssd:
-            print("  AVERTISSEMENT: Ceci est un périphérique electronique. L'effacement sécurisé à passages multiples:")
+            print("  AVERTISSEMENT: Ceci est un périphérique électronique. L'effacement sécurisé à passages multiples:")
             print("    • Peut endommager le SSD en provoquant une usure excessive")
             print("    • Peut ne pas effacer en toute sécurité toutes les données en raison de la répartition d'usure du SSD")
             print("    • Peut ne pas réécrire tous les secteurs en raison du sur-provisionnement")
@@ -74,7 +73,7 @@ def select_disks() -> list[str]:
         available_disks = get_disk_list()
         disk_names = [disk["Appareil"].replace("/dev/", "") for disk in available_disks]
 
-        # Then iterate over disk_names
+        # Display all available disks with details
         for disk in disk_names:
             print("\n" + "-" * 50)
             print_disk_details(disk)
@@ -124,11 +123,10 @@ def confirm_erasure(disk: str, fs_choice: str, method_description: str) -> bool:
             if is_active:
                 print("\nDANGER: C'est le DISQUE SYSTÈME ACTIF! Son effacement rendra votre système inutilisable.")
                 print("        Le système va PLANTER si vous procédez à l'effacement de ce disque.")
-                
 
             print(f"\nVous êtes sur le point d'EFFACER DÉFINITIVEMENT le disque {disk_id} (/dev/{disk}).")
-            print(f"Filesystem: {fs_choice}")
-            print(f"Method: {method_description}")
+            print(f"Système de fichiers: {fs_choice}")
+            print(f"Méthode: {method_description}")
             print("Cette opération NE PEUT PAS être annulée et TOUTES LES DONNÉES SERONT PERDUES!")
             
             confirmation = input(f"Êtes-vous sûr de vouloir effacer le disque {disk_id}? (oui/non): ").strip().lower()
@@ -150,10 +148,10 @@ def confirm_erasure(disk: str, fs_choice: str, method_description: str) -> bool:
 def get_disk_confirmations(disks: list[str], fs_choice: str, passes: int, use_crypto: bool, zero_fill: bool) -> list[str]:
     """Get confirmation for each disk with operation details."""
     if use_crypto:
-        fill_method = "zeros" if zero_fill else "random data"
-        method_description = f"cryptographic erasure (filling with {fill_method})"
+        fill_method = "zéros" if zero_fill else "données aléatoires"
+        method_description = f"effacement cryptographique (remplissage avec {fill_method})"
     else:
-        method_description = f"standard {passes}-pass overwrite"
+        method_description = f"effacement standard avec {passes} passage(s)"
     
     return [disk for disk in disks if confirm_erasure(disk, fs_choice, method_description)]
 
@@ -162,14 +160,14 @@ def print_log_menu() -> None:
     while True:
         try:
             print("\n" + "=" * 50)
-            print("            LOG PRINTING OPTIONS")
+            print("           OPTIONS D'IMPRESSION DES JOURNAUX")
             print("=" * 50)
-            print("1. Print Session Log (current session only)")
-            print("2. Print Complete Log File (all historical logs)")
-            print("3. Return to main menu")
+            print("1. Imprimer le journal de session (session actuelle uniquement)")
+            print("2. Imprimer le fichier de journal complet (tous les journaux historiques)")
+            print("3. Retourner au menu principal")
             print("-" * 50)
             
-            choice = input("Enter your choice (1-3): ").strip()
+            choice = input("Entrez votre choix (1-3): ").strip()
             
             if choice == "1":
                 print_session_log_cli()
@@ -178,45 +176,45 @@ def print_log_menu() -> None:
             elif choice == "3":
                 break
             else:
-                print("Invalid choice. Please enter 1, 2, or 3.")
+                print("Choix invalide. Veuillez entrer 1, 2 ou 3.")
                 
         except KeyboardInterrupt:
-            print("\nReturning to main menu...")
+            print("\nRetour au menu principal...")
             break
         except (IOError, OSError) as e:
-            print(f"Error: {str(e)}")
+            print(f"Erreur: {str(e)}")
 
 def print_session_log_cli() -> None:
     """Generate and save session log as PDF (CLI version)"""
     try:
         if not session_logs:
-            print("No session logs available to print!")
+            print("Aucun journal de session disponible à imprimer!")
             return
         
-        print("Generating session log PDF...")
+        print("Génération du PDF du journal de session...")
         pdf_path = generate_session_pdf(session_logs)
         
-        print(f"Session log PDF generated successfully!")
-        print(f"Saved to: {pdf_path}")
-        add_session_log(f"Session log PDF saved to: {pdf_path}")
+        print(f"PDF du journal de session généré avec succès!")
+        print(f"Sauvegardé dans: {pdf_path}")
+        add_session_log(f"PDF du journal de session sauvegardé dans: {pdf_path}")
         
     except Exception as e:
-        error_msg = f"Error generating session log PDF: {str(e)}"
+        error_msg = f"Erreur lors de la génération du PDF du journal de session: {str(e)}"
         print(error_msg)
         log_error(error_msg)
 
 def print_complete_log_cli() -> None:
     """Generate and save complete log file as PDF (CLI version)"""
     try:
-        print("Generating complete log PDF...")
+        print("Génération du PDF du journal complet...")
         pdf_path = generate_log_file_pdf()
         
-        print(f"Complete log PDF generated successfully!")
-        print(f"Saved to: {pdf_path}")
-        add_session_log(f"Complete log PDF saved to: {pdf_path}")
+        print(f"PDF du journal complet généré avec succès!")
+        print(f"Sauvegardé dans: {pdf_path}")
+        add_session_log(f"PDF du journal complet sauvegardé dans: {pdf_path}")
         
     except Exception as e:
-        error_msg = f"Error generating complete log PDF: {str(e)}"
+        error_msg = f"Erreur lors de la génération du PDF du journal complet: {str(e)}"
         print(error_msg)
         log_error(error_msg)
 
@@ -231,10 +229,9 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, zero_fill=False)
         # Get the disk identifier for better logging
         disk_id = get_disk_serial(disk)
 
-        process_msg = f"\nTraitement du disque {disk_id} (/dev/{disk})..."
-        print(f"{process_msg}...")
+        process_msg = f"Traitement du disque {disk_id} (/dev/{disk})"
+        print(f"\n{process_msg}...")
         add_session_log(process_msg)
-
         
         # Define a logging function for the CLI
         def log_progress(message):
@@ -246,7 +243,6 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, zero_fill=False)
             warning_msg = f"ATTENTION: {disk_id} est un SSD - l'effacement à passages multiples peut ne pas être efficace"
             print(f"  {warning_msg}")
             add_session_log(warning_msg)
-
         
         # Process the disk using the imported function with crypto flag and filling method
         filling_method = "zero" if zero_fill else "random"
@@ -257,7 +253,7 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, zero_fill=False)
         add_session_log(success_msg)
         return True
     except (CalledProcessError, SubprocessError) as e:
-        error_msg = f"Erreur lors du traitement du disque /dev/{disk}: {str(e)}"}"
+        error_msg = f"Erreur lors du traitement du disque /dev/{disk}: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         add_session_log(error_msg)
@@ -285,23 +281,16 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, zero_fill=False)
         print(error_msg)
         log_error(error_msg)
         add_session_log(error_msg)
-
         return False
 
 def run_disk_erasure_operation(args):
     """Run the disk erasure operation workflow"""
     try:
         # First, list disks and select disks to erase
-        print("Liste des disques disponibles: ")
+        print("Liste des disques disponibles:")
         disks = select_disks()
         if not disks:
             print("Aucun disque sélectionné. Sortie.")
-            return
-        
-        # Then, get confirmation for each disk
-        confirmed_disks = get_disk_confirmations(disks)
-        if not confirmed_disks:
-            print("Aucun disque confirmé pour effacement. Sortie.")
             return
         
         # Get operation parameters
@@ -309,9 +298,8 @@ def run_disk_erasure_operation(args):
         passes = args.passes
         use_crypto = args.crypto
         zero_fill = args.zero
-        
 
-        print(f"Système de fichiers sélectionné: {fs_choice}")
+        print(f"\nSystème de fichiers sélectionné: {fs_choice}")
         add_session_log(f"Système de fichiers sélectionné: {fs_choice}")
         
         if use_crypto:
@@ -320,14 +308,14 @@ def run_disk_erasure_operation(args):
             print(method_msg)
             add_session_log(method_msg)
         else:
-            method_msg = f"Méthode d'effacement: Standard avec {passes} passages"
+            method_msg = f"Méthode d'effacement: Standard avec {passes} passage(s)"
             print(method_msg)
             add_session_log(method_msg)
         
-        # Then, get confirmation for each disk with detailed operation info
+        # Get confirmation for each disk with detailed operation info
         confirmed_disks = get_disk_confirmations(disks, fs_choice, passes, use_crypto, zero_fill)
         if not confirmed_disks:
-            print("No disks confirmed for erasure. Returning to main menu.")
+            print("Aucun disque confirmé pour effacement. Retour au menu principal.")
             return
         
         print("\nTous les disques confirmés. Démarrage des opérations...\n")
@@ -346,18 +334,17 @@ def run_disk_erasure_operation(args):
                     if result:
                         completed += 1
                 except (RuntimeError, ValueError) as e:
-
                     error_msg = f"Erreur lors du traitement du disque: {str(e)}"
                     log_error(error_msg)
                     add_session_log(error_msg)
         
-        completion_msg = f"\nOpérations terminées sur {completed}/{len(confirmed_disks)} disques."
+        completion_msg = f"Opérations terminées sur {completed}/{len(confirmed_disks)} disques."
         print(f"\n{completion_msg}")
         log_info(completion_msg)
         add_session_log(completion_msg)
         
     except KeyboardInterrupt:
-        interrupt_msg = "Programme terminé par l'utilisateur (Ctrl+C)""
+        interrupt_msg = "Programme terminé par l'utilisateur (Ctrl+C)"
         print(f"\n{interrupt_msg}")
         add_session_log(interrupt_msg)
     except Exception as e:
@@ -373,7 +360,7 @@ def run_cli_mode(args):
     try:
         # Check for root privileges
         if os.geteuid() != 0:
-            print("Erreur: Ce programme doit être exécute en tant que root!")
+            print("Erreur: Ce programme doit être exécuté en tant que root!")
             sys.exit(1)
             
         print("=" * 60)
@@ -381,21 +368,21 @@ def run_cli_mode(args):
         print("=" * 60)
         
         # Initialize session log
-        start_msg = "CLI lancée"
+        start_msg = "Interface CLI lancée"
         add_session_log(start_msg)
         print(f"Session démarrée à {time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         while True:
             try:
                 print("\n" + "=" * 50)
-                print("                MAIN MENU")
+                print("                MENU PRINCIPAL")
                 print("=" * 50)
-                print("1. Start Disk Erasure Operation")
-                print("2. Print Log Options")
-                print("3. Exit")
+                print("1. Démarrer l'opération d'effacement de disque")
+                print("2. Options d'impression des journaux")
+                print("3. Quitter")
                 print("-" * 50)
                 
-                choice = input("Enter your choice (1-3): ").strip()
+                choice = input("Entrez votre choix (1-3): ").strip()
                 
                 if choice == "1":
                     # Disk erasure operation
@@ -407,17 +394,17 @@ def run_cli_mode(args):
                 
                 elif choice == "3":
                     # Exit
-                    exit_msg = "CLI session ended by user"
+                    exit_msg = "Session CLI terminée par l'utilisateur"
                     print(f"\n{exit_msg}")
                     add_session_log(exit_msg)
                     log_info(exit_msg)
                     break
                 
                 else:
-                    print("Invalid choice. Please enter 1, 2, or 3.")
+                    print("Choix invalide. Veuillez entrer 1, 2 ou 3.")
                     
             except KeyboardInterrupt:
-                interrupt_msg = "Main menu operation interrupted by user (Ctrl+C)"
+                interrupt_msg = "Opération du menu principal interrompue par l'utilisateur (Ctrl+C)"
                 print(f"\n{interrupt_msg}")
                 add_session_log(interrupt_msg)
                 continue
@@ -437,4 +424,3 @@ def run_cli_mode(args):
     except SubprocessError as e:
         log_error(f"Erreur de sous-processus: {str(e)}")
         sys.exit(1)
-
