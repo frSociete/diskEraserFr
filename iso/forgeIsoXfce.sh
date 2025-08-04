@@ -4,10 +4,9 @@
 set -e
 
 # Variables
-
-ISO_NAME="diskEraserFr-V5.3.iso"
-WORK_DIR="$HOME/debian-live-build"
-CODE_DIR="$HOME/diskEraserFr/code"
+WORK_DIR="$(pwd)/debian-live-build"
+CODE_DIR="$(pwd)/../code"
+ISO_NAME="diskEraserFr-v5.4.iso"
 
 # Install necessary tools
 echo "Installing live-build and required dependencies..."
@@ -234,7 +233,7 @@ echo "Building the ISO..."
 sudo lb build
 
 # Move the ISO
-mv live-image-amd64.hybrid.iso "$HOME/$ISO_NAME"
+mv live-image-amd64.hybrid.iso "$ISO_NAME"
 
 # Cleanup
 sudo lb clean
