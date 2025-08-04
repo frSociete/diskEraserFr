@@ -15,7 +15,7 @@ from typing import Optional, Dict, List, Callable, Any
 class DiskEraserGUI:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("Secure Disk Eraser")
+        self.root.title("Effaceur de Disque Sécurisé")
         self.root.geometry("600x500")
         # Set fullscreen mode to True
         self.root.attributes("-fullscreen", True)
@@ -33,7 +33,7 @@ class DiskEraserGUI:
         
         # Check for root privileges
         if os.geteuid() != 0:
-            messagebox.showerror("Error", "This program must be run as root!")
+            messagebox.showerror("Erreur", "Ce programme doit être exécuté en tant que root !")
             root.destroy()
             sys.exit(1)
         
@@ -46,11 +46,11 @@ class DiskEraserGUI:
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Title
-        title_label = ttk.Label(main_frame, text="Secure Disk Eraser", font=("Arial", 16, "bold"))
+        title_label = ttk.Label(main_frame, text="Effaceur de Disque Sécurisé", font=("Arial", 16, "bold"))
         title_label.pack(pady=10)
         
         # Left frame - Disk selection
-        disk_frame = ttk.LabelFrame(main_frame, text="Select Disks to Erase")
+        disk_frame = ttk.LabelFrame(main_frame, text="Sélectionner les disques à effacer")
         disk_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Scrollable frame for disks
@@ -80,7 +80,7 @@ class DiskEraserGUI:
         self.ssd_disclaimer_label.pack(side=tk.BOTTOM, pady=5)
         
         # Refresh button
-        refresh_button = ttk.Button(disk_frame, text="Refresh Disks", command=self.refresh_disks)
+        refresh_button = ttk.Button(disk_frame, text="Actualiser les disques", command=self.refresh_disks)
         refresh_button.pack(pady=10)
         
         # Right frame - Options
@@ -88,10 +88,10 @@ class DiskEraserGUI:
         options_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5, pady=5)
         
         # Erasure method options
-        method_label = ttk.Label(options_frame, text="Erasure Method:")
+        method_label = ttk.Label(options_frame, text="Méthode d'effacement :")
         method_label.pack(anchor="w", pady=(10, 5))
         
-        methods = [("Standard Overwrite", "overwrite"), ("Cryptographic Erasure", "crypto")]
+        methods = [("Écrasement standard", "overwrite"), ("Effacement cryptographique", "crypto")]
         for text, value in methods:
             rb = ttk.Radiobutton(options_frame, text=text, value=value, variable=self.erase_method_var, 
                                 command=self.update_method_options)
@@ -101,23 +101,23 @@ class DiskEraserGUI:
         self.passes_frame = ttk.Frame(options_frame)
         self.passes_frame.pack(fill=tk.X, pady=10, padx=5)
         
-        passes_label = ttk.Label(self.passes_frame, text="Number of passes:")
+        passes_label = ttk.Label(self.passes_frame, text="Nombre de passes :")
         passes_label.pack(side=tk.LEFT, padx=5)
         
         passes_entry = ttk.Entry(self.passes_frame, textvariable=self.passes_var, width=5)
         passes_entry.pack(side=tk.LEFT, padx=5)
         
         # Crypto fill method options (for crypto method)
-        self.crypto_fill_frame = ttk.LabelFrame(options_frame, text="Fill Method (Crypto)")
+        self.crypto_fill_frame = ttk.LabelFrame(options_frame, text="Méthode de remplissage (Crypto)")
         # Initially hidden, will be shown when crypto method is selected
         
-        fill_methods = [("Random Data", "random"), ("Zero Data", "zero")]
+        fill_methods = [("Données aléatoires", "random"), ("Données zéro", "zero")]
         for text, value in fill_methods:
             rb = ttk.Radiobutton(self.crypto_fill_frame, text=text, value=value, variable=self.crypto_fill_var)
             rb.pack(anchor="w", padx=20, pady=2)
         
         # Filesystem options
-        fs_label = ttk.Label(options_frame, text="Choose Filesystem:")
+        fs_label = ttk.Label(options_frame, text="Choisir système de fichiers :")
         fs_label.pack(anchor="w", pady=(10, 5))
         
         filesystems = [("ext4", "ext4"), ("NTFS", "ntfs"), ("FAT32", "vfat")]
@@ -126,11 +126,11 @@ class DiskEraserGUI:
             rb.pack(anchor="w", padx=20)
         
         # Exit fullscreen button
-        exit_button = ttk.Button(options_frame, text="Exit Fullscreen", command=self.toggle_fullscreen)
+        exit_button = ttk.Button(options_frame, text="Quitter plein écran", command=self.toggle_fullscreen)
         exit_button.pack(pady=5, padx=10, fill=tk.X)
         
         # Start button
-        start_button = ttk.Button(options_frame, text="Start Erasure", command=self.start_erasure)
+        start_button = ttk.Button(options_frame, text="Démarrer l'effacement", command=self.start_erasure)
         start_button.pack(pady=20, padx=10, fill=tk.X)
 
         # Print log buttons frame
@@ -148,23 +148,23 @@ class DiskEraserGUI:
         print_log_button.pack(side=tk.RIGHT, padx=(5, 0), fill=tk.X, expand=True)
 
         # Exit program button
-        close_button = ttk.Button(options_frame, text="Exit", command=self.exit_application)
+        close_button = ttk.Button(options_frame, text="Quitter", command=self.exit_application)
         close_button.pack(pady=5, padx=10, fill=tk.X)
         
         # Progress frame
-        progress_frame = ttk.LabelFrame(main_frame, text="Progress")
+        progress_frame = ttk.LabelFrame(main_frame, text="Progression")
         progress_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
         
         self.progress_var = tk.DoubleVar()
         self.progress = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
         self.progress.pack(fill=tk.X, padx=10, pady=10)
         
-        self.status_var = tk.StringVar(value="Ready")
+        self.status_var = tk.StringVar(value="Prêt")
         status_label = ttk.Label(progress_frame, textvariable=self.status_var)
         status_label.pack(pady=5)
         
         # Log display
-        log_frame = ttk.LabelFrame(main_frame, text="Log")
+        log_frame = ttk.LabelFrame(main_frame, text="Journal")
         log_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         self.log_text = tk.Text(log_frame, height=6, wrap=tk.WORD)
@@ -248,7 +248,7 @@ class DiskEraserGUI:
 
     def exit_application(self) -> None:
         """Log and close the application when Exit is clicked"""
-        exit_message = "Application closed by user via Exit button"
+        exit_message = "Application fermée par l'utilisateur via le bouton Quitter"
         log_info(exit_message)
         self.update_gui_log(exit_message)
         blank()  # Add separator in log file
@@ -270,11 +270,11 @@ class DiskEraserGUI:
         self.disks = get_disk_list()
         
         if not self.disks:
-            no_disk_label = ttk.Label(self.scrollable_disk_frame, text="No disks found")
+            no_disk_label = ttk.Label(self.scrollable_disk_frame, text="Aucun disque trouvé")
             no_disk_label.pack(pady=10)
             self.disclaimer_var.set("")
             self.ssd_disclaimer_var.set("")
-            self.update_gui_log("No disks found.")
+            self.update_gui_log("Aucun disque trouvé.")
             return
         
         # Get active device(s) - now always returns a list or None with LVM resolution built-in
@@ -287,31 +287,24 @@ class DiskEraserGUI:
                 active_physical_drives.add(get_base_disk(dev))
             log_info(f"Active physical devices: {active_physical_drives}")
             
-            # Set disclaimer if we found an active disk
-            if active_physical_drives:
-                self.disclaimer_var.set(
-                    "WARNING: Disk marked in red contains the active filesystem. "
-                    "Erasing this disk will cause system failure and data loss!"
-                )
-            else:
-                self.disclaimer_var.set("")
+        # Set disclaimer if we found an active disk
+        if active_physical_drives:
+            self.disclaimer_var.set(f"ATTENTION : Le disque marqué en rouge contient le système de fichiers actif. L'effacement de ce disque est bloqué pour éviter une défaillance du système et une perte de données !")
+
         else:
             self.disclaimer_var.set("")
         
         # Check if any SSDs are present and set the SSD disclaimer
         has_ssd = False
         for disk in self.disks:
-            device_name = disk['device'].replace('/dev/', '')
+            device_name = disk['Appareil'].replace('/dev/', '')
             if is_ssd(device_name):
                 has_ssd = True
                 break
                 
         if has_ssd:
-            self.ssd_disclaimer_var.set(
-                "WARNING: SSD devices detected. Multiple-pass erasure may damage SSDs "
-                "and NOT achieve secure data deletion due to SSD wear leveling. "
-                "For SSDs, use cryptographic erase mode instead."
-            )
+            self.ssd_disclaimer_var.set("ATTENTION : Périphériques electroniques détectés. L'effacement en plusieurs passes peut endommager les disques electroniques et NE PAS réussir à supprimer les données en toute sécurité en raison de la répartition d'usure des SSD. Pour les disques electroniques, utilisez le mode d'effacement cryptographique.")
+
         else:
             self.ssd_disclaimer_var.set("")
         
@@ -325,25 +318,31 @@ class DiskEraserGUI:
             checkbox_row = ttk.Frame(disk_entry_frame)
             checkbox_row.pack(fill=tk.X)
             
-            var = tk.BooleanVar()
-            self.disk_vars[disk['device']] = var
+            var = tk.BooleanVar(value=False)
+            self.disk_vars[disk['Appareil']] = var
             
-            cb = ttk.Checkbutton(checkbox_row, variable=var)
-            cb.pack(side=tk.LEFT)
             
             # Get disk information
-            device_name = disk['device'].replace('/dev/', '')
+            device_name = disk['Appareil'].replace('/dev/', '')
             disk_identifier = get_disk_serial(device_name)
             is_device_ssd = is_ssd(device_name)
-            ssd_indicator = " (Solid_state)" if is_device_ssd else " (Mechanical)"
+            ssd_indicator = " (Electronique)" if is_device_ssd else " (Mécanique)"
             
             # Determine if this is the active disk
             base_device_name = get_base_disk(device_name)
             is_active = base_device_name in active_physical_drives
-            active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
+            active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
             
             # Set text color
             text_color = "red" if is_active else "blue" if is_device_ssd else "black"
+
+            # Create the checkbox and set state based on if it's an active disk
+            cb = ttk.Checkbutton(checkbox_row, variable=var, state="disabled" if is_active else "normal")
+            # Make sure we can't select the active disk
+            if is_active:
+                var.set(False)
+                cb.configure(state="disabled")
+            cb.pack(side=tk.LEFT)
             
             # Create disk identifier label with wrapping
             disk_id_label = ttk.Label(
@@ -361,7 +360,7 @@ class DiskEraserGUI:
             # Create disk details label
             disk_details_label = ttk.Label(
                 details_row,
-                text=f"Size: {disk['size']} - Model: {disk['model']}",
+                text=f"Taille: {disk['Taille']} - Modèle: {disk['Modèle']}",
                 wraplength=300,
                 foreground=text_color
             )
@@ -375,7 +374,7 @@ class DiskEraserGUI:
         selected_disks = [disk for disk, var in self.disk_vars.items() if var.get()]
         
         if not selected_disks:
-            messagebox.showwarning("Warning", "No disks selected!")
+            messagebox.showwarning("Avertissement", "Aucun disque sélectionné !")
             return
         
         # Check if active disk is selected
@@ -386,14 +385,6 @@ class DiskEraserGUI:
                 active_disk_selected = True
                 break
 
-        # Additional warning for active disk
-        if active_disk_selected:
-            if not messagebox.askyesno("DANGER - SYSTEM DISK SELECTED", 
-                                      "WARNING: You have selected the ACTIVE SYSTEM DISK!\n\n"
-                                      "Erasing this disk will CRASH your system and cause PERMANENT DATA LOSS!\n\n"
-                                      "Are you absolutely sure you want to continue?",
-                                      icon="warning"):
-                return
         
         # Get erasure method
         erase_method = self.erase_method_var.get()
@@ -435,19 +426,19 @@ class DiskEraserGUI:
         disk_list = "\n".join(disk_identifiers)
         
         # Add method-specific information to confirmation dialog
-        method_info = "using cryptographic erasure" if erase_method == "crypto" else f"with {self.passes_var.get()} pass overwrite"
+        method_info = "en utilisant l'effacement cryptographique" if erase_method == "crypto" else f"avec un écrasement en {self.passes_var.get()} passes"
         
-        if not messagebox.askyesno("Confirm Erasure", 
-                                  f"WARNING: You are about to securely erase the following disks {method_info}:\n\n{disk_list}\n\n"
-                                  "This operation CANNOT be undone and ALL DATA WILL BE LOST!\n\n"
-                                  "Are you absolutely sure you want to continue?"):
+        if not messagebox.askyesno("Confirmer l'effacement", 
+                                  f"ATTENTION : Vous êtes sur le point d'effacer de manière sécurisée les disques suivants {method_info} :\n\n{disk_list}\n\n"
+                                  "Cette opération NE PEUT PAS être annulée et TOUTES LES DONNÉES SERONT PERDUES !\n\n"
+                                  "Êtes-vous absolument sûr de vouloir continuer ?"):
             return
         
         # Double-check confirmation with a different dialog
-        if not messagebox.askyesno("FINAL WARNING", 
-                                  "THIS IS YOUR FINAL WARNING!\n\n"
-                                  "All selected disks will be completely erased.\n\n"
-                                  "Do you want to proceed?"):
+        if not messagebox.askyesno("AVERTISSEMENT FINAL", 
+                                  "CECI EST VOTRE DERNIER AVERTISSEMENT !\n\n"
+                                  "Tous les disques sélectionnés seront complètement effacés.\n\n"
+                                  "Voulez-vous poursuivre ?"):
             return
         
         # Get options
@@ -459,25 +450,25 @@ class DiskEraserGUI:
             try:
                 passes = int(self.passes_var.get())
                 if passes < 1:
-                    messagebox.showerror("Error", "Number of passes must be at least 1")
+                    messagebox.showerror("Erreur", "Le nombre de passes doit être au moins 1")
                     return
             except ValueError:
-                messagebox.showerror("Error", "Number of passes must be a valid integer")
+                messagebox.showerror("Erreur", "Le nombre de passes doit être un entier valide")
                 return
         
         # Clear session logs for new operation
         self.session_logs = []
         
         # Start processing in a separate thread
-        self.status_var.set("Starting erasure process...")
+        self.status_var.set("Démarrage du processus d'effacement...")
         threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes, erase_method), daemon=True).start()
     
     def progress_state(self, disks: List[str], fs_choice: str, passes: int, erase_method: str) -> None:
-        method_str = "cryptographic erasure" if erase_method == "crypto" else f"standard {passes}-pass overwrite"
-        self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
-        log_info(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
-        self.update_gui_log(f"Selected filesystem: {fs_choice}")
-        log_info(f"Selected filesystem: {fs_choice}")
+        method_str = "effacement cryptographique" if erase_method == "crypto" else f"écrasement standard en {passes} passes"
+        self.update_gui_log(f"Démarrage de l'effacement sécurisé de {len(disks)} disque(s) en utilisant {method_str}")
+        log_info(f"Démarrage de l'effacement sécurisé de {len(disks)} disque(s) en utilisant {method_str}")
+        self.update_gui_log(f"Système de fichiers sélectionné : {fs_choice}")
+        log_info(f"Système de fichiers sélectionné : {fs_choice}")
         
         total_disks = len(disks)
         completed_disks = 0
@@ -496,18 +487,18 @@ class DiskEraserGUI:
                     future.result()
                     completed_disks += 1
                     self.update_progress((completed_disks / total_disks) * 100)
-                    self.status_var.set(f"Completed {completed_disks}/{total_disks} disks")
+                    self.status_var.set(f"Terminé {completed_disks}/{total_disks} disques")
                 except (CalledProcessError, FileNotFoundError, PermissionError, OSError) as e:
-                    error_msg = f"Error processing disk {disk}: {str(e)}"
+                    error_msg = f"Erreur lors du traitement du disque {disk} : {str(e)}"
                     self.update_gui_log(error_msg)
                     log_error(error_msg)
                 except KeyboardInterrupt:
-                    error_msg = "Operation interrupted by user"
+                    error_msg = "Opération interrompue par l'utilisateur"
                     self.update_gui_log(error_msg)
                     log_error(error_msg)
             
-        self.status_var.set("Erasure process completed")
-        messagebox.showinfo("Complete", "Disk erasure operation has completed!")
+        self.status_var.set("Processus d'effacement terminé")
+        messagebox.showinfo("Terminé", "L'opération d'effacement des disques est terminée !")
     
     def process_disk_wrapper(self, disk: str, fs_choice: str, passes: int, erase_method: str) -> None:
         """
@@ -519,19 +510,19 @@ class DiskEraserGUI:
         # Get the disk ID for status updates
         try:
             disk_id = get_disk_serial(disk_name)
-            self.status_var.set(f"Erasing {disk_id}...")
+            self.status_var.set(f"Effacement de {disk_id}...")
         except (CalledProcessError, SubprocessError) as e:
-            self.update_gui_log(f"Error getting disk serial: {str(e)}")
-            self.status_var.set(f"Erasing {disk_name}...")
+            self.update_gui_log(f"Erreur lors de l'obtention du numéro de série du disque : {str(e)}")
+            self.status_var.set(f"Effacement de {disk_name}...")
         except FileNotFoundError as e:
-            self.update_gui_log(f"Required command not found: {str(e)}")
-            self.status_var.set(f"Erasing {disk_name}...")
+            self.update_gui_log(f"Commande requise non trouvée : {str(e)}")
+            self.status_var.set(f"Effacement de {disk_name}...")
         except PermissionError as e:
-            self.update_gui_log(f"Permission error: {str(e)}")
-            self.status_var.set(f"Erasing {disk_name}...")
+            self.update_gui_log(f"Erreur de permission : {str(e)}")
+            self.status_var.set(f"Effacement de {disk_name}...")
         except OSError as e:
-            self.update_gui_log(f"OS error: {str(e)}")
-            self.status_var.set(f"Erasing {disk_name}...")
+            self.update_gui_log(f"Erreur OS : {str(e)}")
+            self.status_var.set(f"Effacement de {disk_name}...")
         
         # Define GUI log callback for process_disk
         def gui_log_callback(message: str) -> None:
@@ -543,19 +534,19 @@ class DiskEraserGUI:
             process_disk(disk_name, fs_choice, passes, use_crypto, log_func=gui_log_callback)
             
         except CalledProcessError as e:
-            self.update_gui_log(f"Process error: {str(e)}")
+            self.update_gui_log(f"Erreur de processus : {str(e)}")
             raise
         except FileNotFoundError as e:
-            self.update_gui_log(f"Required command not found: {str(e)}")
+            self.update_gui_log(f"Commande requise non trouvée : {str(e)}")
             raise
         except PermissionError as e:
-            self.update_gui_log(f"Permission error: {str(e)}")
+            self.update_gui_log(f"Erreur de permission : {str(e)}")
             raise
         except OSError as e:
-            self.update_gui_log(f"OS error: {str(e)}")
+            self.update_gui_log(f"Erreur OS : {str(e)}")
             raise
         except KeyboardInterrupt:
-            self.update_gui_log("Operation interrupted by user")
+            self.update_gui_log("Opération interrompue par l'utilisateur")
             raise
     
     def update_progress(self, value: float) -> None:

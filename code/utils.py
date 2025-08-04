@@ -53,7 +53,7 @@ def get_disk_list() -> list[dict]:
     """
     Get list of available disks as structured data.
     Returns a list of dictionaries with disk information.
-    Each dictionary contains: 'device', 'size', and 'model'.
+    Each dictionary contains: 'Appareil', 'Taille', and 'Modèle'.
     """
     try:
         # Use list_disks function to get raw output
@@ -77,13 +77,13 @@ def get_disk_list() -> list[dict]:
             if len(parts) >= 2:
                 size = parts[1]
                 
-                # MODEL may be missing, set to "Unknown" if it is
-                model = parts[3] if len(parts) > 3 else "Unknown"
+                # MODEL may be missing, set to "Inconnu" if it is
+                model = parts[3] if len(parts) > 3 else "Inconnu"
                 
                 disks.append({
-                    "device": f"/dev/{device}",
-                    "size": size,
-                    "model": model
+                    "Appareil": f"/dev/{device}",
+                    "Taille": size,
+                    "Modèle": model
                 })
         return disks
     except FileNotFoundError as e:
@@ -147,7 +147,7 @@ def get_physical_drives_for_logical_volumes(active_devices: list) -> set:
     try:
         # Get all physical drives from disk list
         disk_list = get_disk_list()
-        physical_device_names = [disk['device'].replace('/dev/', '') for disk in disk_list]
+        physical_device_names = [disk['Appareil'].replace('/dev/', '') for disk in disk_list]
         
         for physical_device in physical_device_names:
             try:
