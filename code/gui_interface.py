@@ -7,7 +7,7 @@ from subprocess import CalledProcessError, SubprocessError
 from disk_erase import get_disk_serial, is_ssd
 from utils import get_disk_list, get_physical_drives_for_logical_volumes, get_base_disk
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from log_handler import log_info, log_error, blank
+from log_handler import log_info, log_error, log_erase_operation, blank, generate_session_pdf, generate_log_file_pdf
 from disk_operations import get_active_disk, process_disk
 import threading
 from typing import Optional, Dict, List, Callable, Any
@@ -27,6 +27,9 @@ class DiskEraserGUI:
         self.disks: List[Dict[str, str]] = []
         self.disk_progress: Dict[str, float] = {}
         self.active_disk = get_active_disk()
+        
+        # Session logs for PDF generation
+        self.session_logs: List[str] = []
         
         # Check for root privileges
         if os.geteuid() != 0:
@@ -130,6 +133,20 @@ class DiskEraserGUI:
         start_button = ttk.Button(options_frame, text="Start Erasure", command=self.start_erasure)
         start_button.pack(pady=20, padx=10, fill=tk.X)
 
+        # Print log buttons frame
+        log_buttons_frame = ttk.Frame(options_frame)
+        log_buttons_frame.pack(pady=5, padx=10, fill=tk.X)
+        
+        # Print session log button
+        print_session_button = ttk.Button(log_buttons_frame, text="Print Session Log", 
+                                         command=self.print_session_log)
+        print_session_button.pack(side=tk.LEFT, padx=(0, 5), fill=tk.X, expand=True)
+        
+        # Print complete log button
+        print_log_button = ttk.Button(log_buttons_frame, text="Print Complete Log", 
+                                     command=self.print_complete_log)
+        print_log_button.pack(side=tk.RIGHT, padx=(5, 0), fill=tk.X, expand=True)
+
         # Exit program button
         close_button = ttk.Button(options_frame, text="Exit", command=self.exit_application)
         close_button.pack(pady=5, padx=10, fill=tk.X)
@@ -162,6 +179,46 @@ class DiskEraserGUI:
         
         # Initial method options update
         self.update_method_options()
+    
+    def print_session_log(self) -> None:
+        """Generate and save session log as PDF"""
+        try:
+            if not self.session_logs:
+                messagebox.showwarning("Warning", "No session logs available to print!")
+                return
+            
+            self.status_var.set("Generating session log PDF...")
+            pdf_path = generate_session_pdf(self.session_logs)
+            
+            success_msg = f"Session log PDF generated successfully!\nSaved to: {pdf_path}"
+            messagebox.showinfo("PDF Generated", success_msg)
+            self.update_gui_log(f"Session log PDF saved to: {pdf_path}")
+            self.status_var.set("Session log PDF generated")
+            
+        except Exception as e:
+            error_msg = f"Error generating session log PDF: {str(e)}"
+            messagebox.showerror("Error", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Ready")
+    
+    def print_complete_log(self) -> None:
+        """Generate and save complete log file as PDF"""
+        try:
+            self.status_var.set("Generating complete log PDF...")
+            pdf_path = generate_log_file_pdf()
+            
+            success_msg = f"Complete log PDF generated successfully!\nSaved to: {pdf_path}"
+            messagebox.showinfo("PDF Generated", success_msg)
+            self.update_gui_log(f"Complete log PDF saved to: {pdf_path}")
+            self.status_var.set("Complete log PDF generated")
+            
+        except Exception as e:
+            error_msg = f"Error generating complete log PDF: {str(e)}"
+            messagebox.showerror("Error", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Ready")
     
     def update_method_options(self) -> None:
         """Update UI based on the selected erasure method"""
@@ -362,11 +419,17 @@ class DiskEraserGUI:
                                           icon="warning"):
                     return
         
-        # Get disk identifiers
+        # Get disk identifiers and log each erasure operation
         disk_identifiers = []
         for disk in selected_disks:
             disk_name = disk.replace('/dev/', '')
-            disk_identifiers.append(get_disk_serial(disk_name))
+            disk_identifier = get_disk_serial(disk_name)
+            disk_identifiers.append(disk_identifier)
+            
+            # Log detailed erasure operation for each disk
+            fs_choice = self.filesystem_var.get()
+            method_description = "cryptographic erasure" if erase_method == "crypto" else f"standard {self.passes_var.get()}-pass overwrite"
+            log_erase_operation(disk_identifier, fs_choice, method_description)
         
         # Confirm erasure
         disk_list = "\n".join(disk_identifiers)
@@ -401,6 +464,9 @@ class DiskEraserGUI:
             except ValueError:
                 messagebox.showerror("Error", "Number of passes must be a valid integer")
                 return
+        
+        # Clear session logs for new operation
+        self.session_logs = []
         
         # Start processing in a separate thread
         self.status_var.set("Starting erasure process...")
@@ -497,13 +563,16 @@ class DiskEraserGUI:
         self.root.update_idletasks()
     
     def update_gui_log(self, message: str) -> None:
-        """Update only the GUI log window with a message."""
+        """Update both the GUI log window and session logs with a message."""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         log_message = f"[{timestamp}] {message}\n"
 
         # Update log in the GUI
         self.log_text.insert(tk.END, log_message)
         self.log_text.see(tk.END)
+        
+        # Add to session logs for PDF generation
+        self.session_logs.append(f"[{timestamp}] {message}")
 
 def run_gui_mode() -> None:
     """Run the GUI version"""
