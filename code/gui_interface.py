@@ -138,12 +138,12 @@ class DiskEraserGUI:
         log_buttons_frame.pack(pady=5, padx=10, fill=tk.X)
         
         # Print session log button
-        print_session_button = ttk.Button(log_buttons_frame, text="Print Session Log", 
+        print_session_button = ttk.Button(log_buttons_frame, text="Imprimer Journal de Session", 
                                          command=self.print_session_log)
         print_session_button.pack(side=tk.LEFT, padx=(0, 5), fill=tk.X, expand=True)
         
         # Print complete log button
-        print_log_button = ttk.Button(log_buttons_frame, text="Print Complete Log", 
+        print_log_button = ttk.Button(log_buttons_frame, text="Imprimer Journal Complet", 
                                      command=self.print_complete_log)
         print_log_button.pack(side=tk.RIGHT, padx=(5, 0), fill=tk.X, expand=True)
 
@@ -184,41 +184,41 @@ class DiskEraserGUI:
         """Generate and save session log as PDF"""
         try:
             if not self.session_logs:
-                messagebox.showwarning("Warning", "No session logs available to print!")
+                messagebox.showwarning("Attention", "Pas de journal de session à imprimer.")
                 return
             
-            self.status_var.set("Generating session log PDF...")
+            self.status_var.set("Génération du PDF du journal de session...")
             pdf_path = generate_session_pdf(self.session_logs)
             
-            success_msg = f"Session log PDF generated successfully!\nSaved to: {pdf_path}"
-            messagebox.showinfo("PDF Generated", success_msg)
-            self.update_gui_log(f"Session log PDF saved to: {pdf_path}")
-            self.status_var.set("Session log PDF generated")
+            success_msg = f"Session du journal PDF générée avec succès !\nEnregistré dans : {pdf_path}"
+            messagebox.showinfo("PDF généré", success_msg)
+            self.update_gui_log(f"Session du journal PDF enregistrée dans : {pdf_path}")
+            self.status_var.set("Session du journal PDF générée")
             
         except Exception as e:
-            error_msg = f"Error generating session log PDF: {str(e)}"
-            messagebox.showerror("Error", error_msg)
+            error_msg = f"Erreur lors de la génération du PDF du journal de session : {str(e)}"
+            messagebox.showerror("Erreur", error_msg)
             self.update_gui_log(error_msg)
             log_error(error_msg)
-            self.status_var.set("Ready")
+            self.status_var.set("Prêt")
     
     def print_complete_log(self) -> None:
         """Generate and save complete log file as PDF"""
         try:
-            self.status_var.set("Generating complete log PDF...")
+            self.status_var.set("Genération du PDF du journal complet...")
             pdf_path = generate_log_file_pdf()
             
-            success_msg = f"Complete log PDF generated successfully!\nSaved to: {pdf_path}"
-            messagebox.showinfo("PDF Generated", success_msg)
-            self.update_gui_log(f"Complete log PDF saved to: {pdf_path}")
-            self.status_var.set("Complete log PDF generated")
+            success_msg = f"Journal complet PDF généré avec succès !\nEnregistré dans : {pdf_path}"
+            messagebox.showinfo("PDF généré", success_msg)
+            self.update_gui_log(f"Journal complet PDF enregistré dans : {pdf_path}")
+            self.status_var.set("PDF du journal complet généré")
             
         except Exception as e:
-            error_msg = f"Error generating complete log PDF: {str(e)}"
-            messagebox.showerror("Error", error_msg)
+            error_msg = f"Erreur lors de la génération du PDF du journal complet : {str(e)}"
+            messagebox.showerror("Erreur", error_msg)
             self.update_gui_log(error_msg)
             log_error(error_msg)
-            self.status_var.set("Ready")
+            self.status_var.set("Prêt")
     
     def update_method_options(self) -> None:
         """Update UI based on the selected erasure method"""
@@ -334,8 +334,8 @@ class DiskEraserGUI:
             active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
             
             # Get disk label from the updated utils
-            disk_label = disk.get('label', 'Unknown')
-            label_indicator = f" [Label: {disk_label}]" if disk_label and disk_label != "No Label" else " [No Label]"
+            disk_label = disk.get('Étiquette', 'Pas d\'étiquette')
+            label_indicator = f" [Label: {disk_label}]" if disk_label and disk_label != "Pas d\'étiquette" else " [Pas d\'étiquette]"
             
             # Set text color
             text_color = "red" if is_active else "blue" if is_device_ssd else "black"
