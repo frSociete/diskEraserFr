@@ -24,12 +24,16 @@ def print_disk_details(disk):
         is_disk_ssd = is_ssd(disk)
         active_disks = get_active_disk()
         
-        # Get disk size from get_disk_list function
+        # Get disk information from get_disk_list function including label
         disk_size = "Unknown"
+        disk_model = "Unknown"
+        disk_label = "No Label"
         available_disks = get_disk_list()
         for available_disk in available_disks:
             if available_disk["device"] == f"/dev/{disk}":
                 disk_size = available_disk["size"]
+                disk_model = available_disk.get("model", "Unknown")
+                disk_label = available_disk.get("label", "No Label")
                 break
         
         is_active = False
@@ -45,6 +49,8 @@ def print_disk_details(disk):
         print(f"Disk: /dev/{disk}")
         print(f"  Serial/ID: {disk_id}")
         print(f"  Size: {disk_size}")
+        print(f"  Model: {disk_model}")
+        print(f"  Label: {disk_label}")
         print(f"  Type: {'Solid_state' if is_disk_ssd else 'Mechanical'}")
         print(f"  Status: {'ACTIVE SYSTEM DISK - DANGER!' if is_active else 'Safe to erase'}")
         
@@ -73,7 +79,58 @@ def select_disks() -> list[str]:
         available_disks = get_disk_list()
         disk_names = [disk["device"].replace("/dev/", "") for disk in available_disks]
 
-        # Then iterate over disk_names
+        # Display summary table first
+        print("\n" + "=" * 80)
+        print("                          AVAILABLE DISKS SUMMARY")
+        print("=" * 80)
+        print(f"{'Device':<12} {'Size':<8} {'Model':<20} {'Label':<15} {'Type':<12} {'Status'}")
+        print("-" * 80)
+        
+        for disk in disk_names:
+            try:
+                disk_id = get_disk_serial(disk)
+                is_disk_ssd = is_ssd(disk)
+                active_disks = get_active_disk()
+                
+                # Get disk information including label
+                disk_size = "Unknown"
+                disk_model = "Unknown"
+                disk_label = "No Label"
+                for available_disk in available_disks:
+                    if available_disk["device"] == f"/dev/{disk}":
+                        disk_size = available_disk["size"]
+                        disk_model = available_disk.get("model", "Unknown")
+                        disk_label = available_disk.get("label", "No Label")
+                        break
+                
+                is_active = False
+                if active_disks:
+                    base_disk = get_base_disk(disk)
+                    for active_disk in active_disks:
+                        active_base_disk = get_base_disk(active_disk)
+                        if base_disk == active_base_disk:
+                            is_active = True
+                            break
+                
+                # Truncate long names for table display
+                model_display = (disk_model[:18] + "..") if len(disk_model) > 20 else disk_model
+                label_display = (disk_label[:13] + "..") if len(disk_label) > 15 else disk_label
+                
+                disk_type = "SSD" if is_disk_ssd else "HDD"
+                status = "ACTIVE!" if is_active else "Safe"
+                
+                print(f"{disk:<12} {disk_size:<8} {model_display:<20} {label_display:<15} {disk_type:<12} {status}")
+                
+            except Exception as e:
+                print(f"{disk:<12} Error retrieving disk information: {str(e)}")
+        
+        print("-" * 80)
+
+        # Then iterate over disk_names for detailed view
+        print("\n" + "=" * 60)
+        print("                    DETAILED DISK INFORMATION")
+        print("=" * 60)
+        
         for disk in disk_names:
             print("\n" + "-" * 50)
             print_disk_details(disk)
