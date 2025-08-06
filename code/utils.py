@@ -32,7 +32,7 @@ def get_disk_label(device: str) -> str:
             labels = [line.strip() for line in output.split('\n') if line.strip()]
             if labels:
                 return labels[0]
-        return "Pas d\étiquette"
+        return "Aucune étiquette"
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "Unknown"
 

@@ -334,8 +334,8 @@ class DiskEraserGUI:
             active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
             
             # Get disk label from the updated utils
-            disk_label = disk.get('Étiquette', 'Pas d\'étiquette')
-            label_indicator = f" [Label: {disk_label}]" if disk_label and disk_label != "Pas d\'étiquette" else " [Pas d\'étiquette]"
+            disk_label = disk.get('Étiquette', 'Aucune étiquette')
+            label_indicator = f" [Etiquette: {disk_label}]" if disk_label and disk_label != "Aucune étiquette" else " [Aucune étiquette]"
             
             # Set text color
             text_color = "red" if is_active else "blue" if is_device_ssd else "black"
