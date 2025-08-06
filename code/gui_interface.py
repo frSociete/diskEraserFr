@@ -140,12 +140,12 @@ class DiskEraserGUI:
         # Print session log button
         print_session_button = ttk.Button(log_buttons_frame, text="Imprimer Journal de Session", 
                                          command=self.print_session_log)
-        print_session_button.pack(side=tk.LEFT, padx=(0, 5), fill=tk.X, expand=True)
+        print_session_button.pack(side=tk.TOP, padx=(5, 10), fill=tk.X, expand=True)
         
         # Print complete log button
         print_log_button = ttk.Button(log_buttons_frame, text="Imprimer Journal Complet", 
                                      command=self.print_complete_log)
-        print_log_button.pack(side=tk.RIGHT, padx=(5, 0), fill=tk.X, expand=True)
+        print_log_button.pack(side=tk.BOTTOM, padx=(5, 10), fill=tk.X, expand=True)
 
         # Exit program button
         close_button = ttk.Button(options_frame, text="Quitter", command=self.exit_application)
