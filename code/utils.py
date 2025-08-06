@@ -19,6 +19,23 @@ def run_command(command_list: list[str]) -> str:
         print("\nOperation interrupted by user (Ctrl+C)")
         sys.exit(130)  # Standard exit code for SIGINT
 
+def get_disk_label(device: str) -> str:
+    """
+    Get the label of a disk device using lsblk.
+    Returns the label or "No Label" if none exists.
+    """
+    try:
+        # Use lsblk to get label information
+        output = run_command(["lsblk", "-o", "LABEL", "-n", f"/dev/{device}"])
+        if output and output.strip():
+            # Get the first non-empty label (in case of multiple partitions)
+            labels = [line.strip() for line in output.split('\n') if line.strip()]
+            if labels:
+                return labels[0]
+        return "No Label"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "Unknown"
+
 def list_disks() -> str:
     """
     Get a raw string output of available disks using lsblk command.
@@ -80,10 +97,15 @@ def get_disk_list() -> list[dict]:
                 # MODEL may be missing, set to "Inconnu" if it is
                 model = parts[3] if len(parts) > 3 else "Inconnu"
                 
+                # Get disk label
+                label = get_disk_label(device)
+                
                 disks.append({
                     "Appareil": f"/dev/{device}",
                     "Taille": size,
-                    "Modèle": model
+                    "Modèle": model,
+                    "Étiquette" : label
+
                 })
         return disks
     except FileNotFoundError as e:

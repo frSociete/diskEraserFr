@@ -333,6 +333,10 @@ class DiskEraserGUI:
             is_active = base_device_name in active_physical_drives
             active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
             
+            # Get disk label from the updated utils
+            disk_label = disk.get('label', 'Unknown')
+            label_indicator = f" [Label: {disk_label}]" if disk_label and disk_label != "No Label" else " [No Label]"
+            
             # Set text color
             text_color = "red" if is_active else "blue" if is_device_ssd else "black"
 
@@ -347,7 +351,7 @@ class DiskEraserGUI:
             # Create disk identifier label with wrapping
             disk_id_label = ttk.Label(
                 checkbox_row, 
-                text=f"{disk_identifier}{ssd_indicator}{active_indicator}",
+                text=f"{disk_identifier}{ssd_indicator}{active_indicator}{label_indicator}",
                 foreground=text_color,
                 wraplength=300
             )
