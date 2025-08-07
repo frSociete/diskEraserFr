@@ -56,6 +56,7 @@ kde-standard
 plasma-nm
 sddm
 sudo
+evince
 live-boot
 live-config
 live-tools
