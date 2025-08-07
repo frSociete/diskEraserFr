@@ -7,7 +7,7 @@ from subprocess import CalledProcessError, SubprocessError
 from disk_erase import get_disk_serial, is_ssd
 from utils import get_disk_list, get_physical_drives_for_logical_volumes, get_base_disk
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from log_handler import log_info, log_error, log_erase_operation, blank, generate_session_pdf, generate_log_file_pdf
+from log_handler import log_info, log_error, log_erase_operation, session_start, session_end, generate_session_pdf, generate_log_file_pdf
 from disk_operations import get_active_disk, process_disk
 import threading
 from typing import Optional, Dict, List, Callable, Any
@@ -28,8 +28,11 @@ class DiskEraserGUI:
         self.disk_progress: Dict[str, float] = {}
         self.active_disk = get_active_disk()
         
-        # Session logs for PDF generation
-        self.session_logs: List[str] = []
+        # Track if active drive message was logged
+        self.active_drive_logged = False
+        
+        # Start session logging - this will now automatically capture all log messages
+        session_start()
         
         # Check for root privileges
         if os.geteuid() != 0:
@@ -183,12 +186,8 @@ class DiskEraserGUI:
     def print_session_log(self) -> None:
         """Generate and save session log as PDF"""
         try:
-            if not self.session_logs:
-                messagebox.showwarning("Warning", "No session logs available to print!")
-                return
-            
             self.status_var.set("Generating session log PDF...")
-            pdf_path = generate_session_pdf(self.session_logs)
+            pdf_path = generate_session_pdf()
             
             success_msg = f"Session log PDF generated successfully!\nSaved to: {pdf_path}"
             messagebox.showinfo("PDF Generated", success_msg)
@@ -251,7 +250,7 @@ class DiskEraserGUI:
         exit_message = "Application closed by user via Exit button"
         log_info(exit_message)
         self.update_gui_log(exit_message)
-        blank()  # Add separator in log file
+        session_end()
         self.root.destroy()
     
     def toggle_fullscreen(self) -> None:
@@ -275,6 +274,7 @@ class DiskEraserGUI:
             self.disclaimer_var.set("")
             self.ssd_disclaimer_var.set("")
             self.update_gui_log("No disks found.")
+            log_info("No disks found during disk refresh")
             return
         
         # Get active device(s) - now always returns a list or None with LVM resolution built-in
@@ -285,7 +285,11 @@ class DiskEraserGUI:
             # get_active_disk() now always returns a list of physical disk names with LVM already resolved
             for dev in active_device:
                 active_physical_drives.add(get_base_disk(dev))
-            log_info(f"Active physical devices: {active_physical_drives}")
+            
+            # Only log once per session
+            if not self.active_drive_logged:
+                log_info(f"Active physical devices: {active_physical_drives}")
+                self.active_drive_logged = True
             
             # Set disclaimer if we found an active disk
             if active_physical_drives:
@@ -432,14 +436,22 @@ class DiskEraserGUI:
             
             # Log detailed erasure operation for each disk
             fs_choice = self.filesystem_var.get()
-            method_description = "cryptographic erasure" if erase_method == "crypto" else f"standard {self.passes_var.get()}-pass overwrite"
+            if erase_method == "crypto":
+                fill_method = self.crypto_fill_var.get()
+                method_description = f"cryptographic erasure with {fill_method} fill"
+            else:
+                method_description = f"standard {self.passes_var.get()}-pass overwrite"
             log_erase_operation(disk_identifier, fs_choice, method_description)
         
         # Confirm erasure
         disk_list = "\n".join(disk_identifiers)
         
         # Add method-specific information to confirmation dialog
-        method_info = "using cryptographic erasure" if erase_method == "crypto" else f"with {self.passes_var.get()} pass overwrite"
+        if erase_method == "crypto":
+            fill_method = self.crypto_fill_var.get()
+            method_info = f"using cryptographic erasure with {fill_method} fill"
+        else:
+            method_info = f"with {self.passes_var.get()} pass overwrite"
         
         if not messagebox.askyesno("Confirm Erasure", 
                                   f"WARNING: You are about to securely erase the following disks {method_info}:\n\n{disk_list}\n\n"
@@ -469,19 +481,25 @@ class DiskEraserGUI:
                 messagebox.showerror("Error", "Number of passes must be a valid integer")
                 return
         
-        # Clear session logs for new operation
-        self.session_logs = []
-        
         # Start processing in a separate thread
         self.status_var.set("Starting erasure process...")
         threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes, erase_method), daemon=True).start()
     
     def progress_state(self, disks: List[str], fs_choice: str, passes: int, erase_method: str) -> None:
-        method_str = "cryptographic erasure" if erase_method == "crypto" else f"standard {passes}-pass overwrite"
-        self.update_gui_log(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
-        log_info(f"Starting secure erasure of {len(disks)} disk(s) using {method_str}")
-        self.update_gui_log(f"Selected filesystem: {fs_choice}")
-        log_info(f"Selected filesystem: {fs_choice}")
+        if erase_method == "crypto":
+            fill_method = self.crypto_fill_var.get()
+            method_str = f"cryptographic erasure with {fill_method} fill"
+        else:
+            method_str = f"standard {passes}-pass overwrite"
+        
+        start_msg = f"Starting secure erasure of {len(disks)} disk(s) using {method_str}"
+        fs_msg = f"Selected filesystem: {fs_choice}"
+        
+        self.update_gui_log(start_msg)
+        log_info(start_msg)
+        
+        self.update_gui_log(fs_msg)
+        log_info(fs_msg)
         
         total_disks = len(disks)
         completed_disks = 0
@@ -509,8 +527,10 @@ class DiskEraserGUI:
                     error_msg = "Operation interrupted by user"
                     self.update_gui_log(error_msg)
                     log_error(error_msg)
-            
-        self.status_var.set("Erasure process completed")
+        
+        complete_msg = "Erasure process completed"
+        self.status_var.set(complete_msg)
+        log_info(complete_msg)
         messagebox.showinfo("Complete", "Disk erasure operation has completed!")
     
     def process_disk_wrapper(self, disk: str, fs_choice: str, passes: int, erase_method: str) -> None:
@@ -537,14 +557,15 @@ class DiskEraserGUI:
             self.update_gui_log(f"OS error: {str(e)}")
             self.status_var.set(f"Erasing {disk_name}...")
         
-        # Define GUI log callback for process_disk
+        # Define GUI log callback for process_disk (only for display, not session logs)
         def gui_log_callback(message: str) -> None:
             self.update_gui_log(message)
         
         try:
             # Call process_disk from disk_operations
             use_crypto = (erase_method == "crypto")
-            process_disk(disk_name, fs_choice, passes, use_crypto, log_func=gui_log_callback)
+            crypto_fill = self.crypto_fill_var.get() if use_crypto else "random"
+            process_disk(disk_name, fs_choice, passes, use_crypto, crypto_fill, log_func=gui_log_callback)
             
         except CalledProcessError as e:
             self.update_gui_log(f"Process error: {str(e)}")
@@ -567,16 +588,13 @@ class DiskEraserGUI:
         self.root.update_idletasks()
     
     def update_gui_log(self, message: str) -> None:
-        """Update both the GUI log window and session logs with a message."""
+        """Update the GUI log window with a message (for display only)."""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         log_message = f"[{timestamp}] {message}\n"
 
         # Update log in the GUI
         self.log_text.insert(tk.END, log_message)
         self.log_text.see(tk.END)
-        
-        # Add to session logs for PDF generation
-        self.session_logs.append(f"[{timestamp}] {message}")
 
 def run_gui_mode() -> None:
     """Run the GUI version"""

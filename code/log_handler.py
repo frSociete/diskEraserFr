@@ -7,11 +7,29 @@ from typing import List
 # Define the log file path
 log_file = "/var/log/disk_erase.log"
 
+# Session tracking - capture all logs during current session
+_session_logs = []
+_session_active = False
+
+class SessionCapturingHandler(logging.Handler):
+    """Custom handler to capture session logs"""
+    def emit(self, record):
+        global _session_logs, _session_active
+        if _session_active:
+            # Format the message the same way as the file handler
+            timestamp = datetime.fromtimestamp(record.created).strftime('%Y-%m-%d %H:%M:%S')
+            formatted_message = f"[{timestamp}] {record.levelname}: {record.getMessage()}"
+            _session_logs.append(formatted_message)
+
 # Configure logging with basic format
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+# Add session capturing handler
+session_handler = SessionCapturingHandler()
+logger.addHandler(session_handler)
 
 try:
     log_handler = logging.FileHandler(log_file)
@@ -41,12 +59,50 @@ def log_erase_operation(disk_id: str, filesystem: str, method: str) -> None:
     message = f"Erasure operation for disk ID: {disk_id}. Filesystem: {filesystem}. Erase method: {method}"
     logger.info(message)
 
-def generate_session_pdf(session_logs: List[str]) -> str:
-    """
-    Generate a PDF from session logs using built-in libraries only.
+def session_start() -> None:
+    """Log session start with clear separator and begin session log capture"""
+    global _session_logs, _session_active
     
-    Args:
-        session_logs: List of log messages from the current session
+    # Clear previous session logs and start capturing
+    _session_logs = []
+    _session_active = True
+    
+    separator = "=" * 80
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(log_file, "a") as f:
+        f.write(f"\n{separator}\n")
+        f.write(f"SESSION START: {timestamp}\n")
+        f.write(f"{separator}\n")
+    
+    # This will be captured in session logs too
+    log_info(f"New session started at {timestamp}")
+
+def session_end() -> None:
+    """Log session end with clear separator and stop session log capture"""
+    global _session_active
+    
+    separator = "=" * 80
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Log session end (this will be captured before we stop)
+    log_info(f"Session ended at {timestamp}")
+    
+    # Stop capturing session logs
+    _session_active = False
+    
+    with open(log_file, "a") as f:
+        f.write(f"\n{separator}\n")
+        f.write(f"SESSION END: {timestamp}\n")
+        f.write(f"{separator}\n\n")
+
+def get_current_session_logs() -> List[str]:
+    """Get all logs from the current session"""
+    global _session_logs
+    return _session_logs.copy()
+
+def generate_session_pdf() -> str:
+    """
+    Generate a PDF from current session logs using built-in libraries only.
     
     Returns:
         str: Path to the generated PDF file
@@ -55,6 +111,12 @@ def generate_session_pdf(session_logs: List[str]) -> str:
         Exception: If PDF generation fails
     """
     try:
+        # Get current session logs
+        session_logs = get_current_session_logs()
+        
+        if not session_logs:
+            raise Exception("No session logs available to generate PDF")
+        
         # Create output directory if it doesn't exist
         output_dir = "/tmp/disk_cloner_logs"
         os.makedirs(output_dir, exist_ok=True)
@@ -368,7 +430,7 @@ def _escape_pdf_string(text: str) -> str:
     except Exception as e:
         return f"Error processing text: {str(e)}"
 
+# Deprecated - replaced with session_start() and session_end()
 def blank() -> None:
     """Add blank lines to separated erasuring process between different execution"""
-    with open("/var/log/disk_erase.log", "a") as log_file:
-        log_file.write("\n----------------------------------\n")
+    session_end()
