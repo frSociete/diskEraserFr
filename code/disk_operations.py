@@ -5,7 +5,7 @@ import re
 from disk_erase import erase_disk_hdd, get_disk_serial, is_ssd, erase_disk_crypto
 from disk_partition import partition_disk
 from disk_format import format_disk
-from log_handler import log_info, log_error, log_erase_operation, session_end
+from log_handler import log_info, log_error, log_erase_operation
 
 def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = False, crypto_fill: str = "random", log_func=None) -> None:
     """
@@ -73,8 +73,6 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
         if log_func:
             log_func(f"Completed operations on disk ID: {disk_id}")
         
-        # End session for this disk operation
-        session_end()
         
     except FileNotFoundError as e:
         log_error(f"Required command not found: {str(e)}")
