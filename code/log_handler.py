@@ -124,33 +124,6 @@ def is_session_active() -> bool:
     global _session_active
     return _session_active
 
-def get_session_log_count() -> int:
-    """Get the number of logs captured in current session"""
-    global _session_logs
-    return len(_session_logs)
-
-def debug_session_state() -> str:
-    """Get detailed session state for debugging"""
-    global _session_logs, _session_active
-    return f"Session active: {_session_active}, Log count: {len(_session_logs)}, Recent logs: {_session_logs[-3:] if _session_logs else 'None'}"
-
-def force_session_active() -> None:
-    """Force session to be active (for debugging)"""
-    global _session_active
-    _session_active = True
-    log_info("Forced session to active state")
-
-def get_session_logs_sample() -> List[str]:
-    """Get first and last few session logs for debugging"""
-    global _session_logs
-    if not _session_logs:
-        return ["No session logs"]
-    
-    if len(_session_logs) <= 10:
-        return _session_logs.copy()
-    
-    return (_session_logs[:5] + ["..."] + _session_logs[-5:])
-
 def generate_session_pdf() -> str:
     """
     Generate a PDF from current session logs using built-in libraries only.
@@ -164,10 +137,6 @@ def generate_session_pdf() -> str:
     try:
         # Get current session logs
         session_logs = get_current_session_logs()
-        
-        # Debug information
-        log_info(f"PDF Generation: Session has {len(session_logs)} log entries")
-        log_info(f"PDF Generation: Session active: {is_session_active()}")
         
         if not session_logs:
             raise Exception("No session logs available to generate PDF")
@@ -238,9 +207,6 @@ def generate_log_file_pdf() -> str:
             with open(log_file, 'r', encoding='latin-1') as f:
                 log_lines = [line.strip() for line in f.readlines() if line.strip()]
         
-        # Debug information
-        log_info(f"PDF Generation: Complete log has {len(log_lines)} lines")
-        
         # Create PDF using basic PDF structure
         _create_simple_pdf(
             pdf_path,
@@ -295,8 +261,6 @@ def _create_simple_pdf(file_path: str, title: str, content_lines: List[str], *in
             pages_content = _prepare_pdf_pages(title, content_lines, *info_lines)
             num_pages = len(pages_content)
             
-            log_info(f"PDF Structure: Creating PDF with {num_pages} pages")
-            
             # Track object positions for xref table
             object_positions = {}
             
@@ -331,8 +295,6 @@ endobj
             for page_idx, page_content in enumerate(pages_content):
                 content_bytes = page_content.encode('utf-8')
                 content_length = len(content_bytes)
-                
-                log_info(f"PDF Structure: Writing page {page_idx + 1} (objects {obj_counter}, {obj_counter + 1})")
                 
                 # Page object (odd numbered: 3, 5, 7, etc.)
                 object_positions[obj_counter] = f.tell()
@@ -384,8 +346,6 @@ endobj
             xref_start = f.tell()
             total_objects = font_obj_num + 1
             
-            log_info(f"PDF Structure: Writing xref table for {total_objects} objects")
-            
             f.write(b'xref\n')
             f.write(f'0 {total_objects}\n'.encode())
             f.write(b'0000000000 65535 f \n')  # Object 0 (always free)
@@ -395,7 +355,6 @@ endobj
                 if i in object_positions:
                     f.write(f'{object_positions[i]:010d} 00000 n \n'.encode())
                 else:
-                    log_error(f"PDF Structure: Missing object position for object {i}")
                     f.write(b'0000000000 00000 f \n')  # Mark as free if missing
             
             # Trailer
@@ -410,10 +369,7 @@ startxref
 '''.encode('utf-8')
             f.write(trailer)
             
-            log_info(f"PDF Structure: Successfully created PDF with {num_pages} pages, {total_objects} objects")
-            
     except Exception as e:
-        log_error(f"Error creating PDF structure: {str(e)}")
         raise Exception(f"Error creating PDF structure: {str(e)}")
 
 def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -> List[str]:
@@ -446,46 +402,36 @@ def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -
                 wrapped_lines.extend(wrapped_content)
                 display_line_number += 1
         
-        # Debug information
-        total_wrapped_lines = len(wrapped_lines)
-        log_info(f"PDF Generation: Total content lines: {len(content_lines)}, Total wrapped lines: {total_wrapped_lines}")
-        
         # Split wrapped lines into pages
         processed_lines = 0
         page_num = 1
         
-        while processed_lines < total_wrapped_lines:
+        while processed_lines < len(wrapped_lines):
             is_first_page = (page_num == 1)
             max_lines_this_page = first_page_content_lines if is_first_page else other_page_content_lines
             
             # Get lines for this page
-            end_line = min(processed_lines + max_lines_this_page, total_wrapped_lines)
+            end_line = min(processed_lines + max_lines_this_page, len(wrapped_lines))
             lines_for_this_page = wrapped_lines[processed_lines:end_line]
             
             if lines_for_this_page:
-                log_info(f"PDF Generation: Creating page {page_num} with {len(lines_for_this_page)} lines (processed {processed_lines}/{total_wrapped_lines})")
                 pages.append(_create_page_content(title, lines_for_this_page, page_num, is_first_page, *info_lines))
                 processed_lines = end_line
                 page_num += 1
                 
                 # Safety check to prevent infinite loops
                 if page_num > 100:  # Reasonable maximum
-                    log_error("PDF Generation: Hit page limit safety check - stopping")
                     break
             else:
-                log_info("PDF Generation: No more lines to process")
                 break
         
         # Ensure at least one page
         if not pages:
-            log_warning("PDF Generation: No pages created, adding default page")
             pages.append(_create_page_content(title, ["No content available."], 1, True, *info_lines))
         
-        log_info(f"PDF Generation: Created {len(pages)} pages total")
         return pages
         
     except Exception as e:
-        log_error(f"Error preparing PDF pages: {str(e)}")
         raise Exception(f"Error preparing PDF pages: {str(e)}")
 
 def _create_page_content(title: str, content_lines: List[str], page_number: int, is_first_page: bool, *info_lines: str) -> str:
@@ -546,26 +492,8 @@ def _create_page_content(title: str, content_lines: List[str], page_number: int,
         return "\n".join(lines)
         
     except Exception as e:
-        log_error(f"Error creating page {page_number} content: {str(e)}")
         # Return a minimal valid content stream if there's an error
         return f"BT\n/F1 12 Tf\n50 400 Td\n(Error creating page {page_number} content: {_escape_pdf_string(str(e))}) Tj\nET"
-
-def _prepare_pdf_content(title: str, content_lines: List[str], *info_lines: str) -> str:
-    """
-    DEPRECATED: Use _prepare_pdf_pages instead for multi-page support.
-    Prepare PDF content stream with proper formatting and line wrapping.
-    
-    Args:
-        title: Document title
-        content_lines: List of content lines
-        *info_lines: Additional info lines
-    
-    Returns:
-        str: Formatted PDF content stream
-    """
-    # This function is kept for backward compatibility but should not be used
-    pages = _prepare_pdf_pages(title, content_lines, *info_lines)
-    return pages[0] if pages else "BT\n(No content available.)\nET"
 
 def _wrap_log_line(content_line: str, line_number: int, max_width: int = 75) -> List[str]:
     """
@@ -648,12 +576,3 @@ def _escape_pdf_string(text: str) -> str:
         
     except Exception as e:
         return f"Error processing text: {str(e)}"
-
-# Deprecated - replaced with session_start() and session_end()
-def blank() -> None:
-    """DEPRECATED: This function used to end sessions prematurely. 
-    Use log_disk_completed() instead for individual disk completion,
-    and only call session_end() when the application actually exits."""
-    log_warning("DEPRECATED: blank() function called - this may cause premature session ending")
-    # Don't actually end the session - just log a warning
-    pass
