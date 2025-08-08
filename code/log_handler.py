@@ -119,6 +119,38 @@ def get_current_session_logs() -> List[str]:
     global _session_logs
     return _session_logs.copy()
 
+def is_session_active() -> bool:
+    """Check if a logging session is currently active"""
+    global _session_active
+    return _session_active
+
+def get_session_log_count() -> int:
+    """Get the number of logs captured in current session"""
+    global _session_logs
+    return len(_session_logs)
+
+def debug_session_state() -> str:
+    """Get detailed session state for debugging"""
+    global _session_logs, _session_active
+    return f"Session active: {_session_active}, Log count: {len(_session_logs)}, Recent logs: {_session_logs[-3:] if _session_logs else 'None'}"
+
+def force_session_active() -> None:
+    """Force session to be active (for debugging)"""
+    global _session_active
+    _session_active = True
+    log_info("Forced session to active state")
+
+def get_session_logs_sample() -> List[str]:
+    """Get first and last few session logs for debugging"""
+    global _session_logs
+    if not _session_logs:
+        return ["No session logs"]
+    
+    if len(_session_logs) <= 10:
+        return _session_logs.copy()
+    
+    return (_session_logs[:5] + ["..."] + _session_logs[-5:])
+
 def generate_session_pdf() -> str:
     """
     Generate a PDF from current session logs using built-in libraries only.
@@ -132,6 +164,10 @@ def generate_session_pdf() -> str:
     try:
         # Get current session logs
         session_logs = get_current_session_logs()
+        
+        # Debug information
+        log_info(f"PDF Generation: Session has {len(session_logs)} log entries")
+        log_info(f"PDF Generation: Session active: {is_session_active()}")
         
         if not session_logs:
             raise Exception("No session logs available to generate PDF")
@@ -202,6 +238,9 @@ def generate_log_file_pdf() -> str:
             with open(log_file, 'r', encoding='latin-1') as f:
                 log_lines = [line.strip() for line in f.readlines() if line.strip()]
         
+        # Debug information
+        log_info(f"PDF Generation: Complete log has {len(log_lines)} lines")
+        
         # Create PDF using basic PDF structure
         _create_simple_pdf(
             pdf_path,
@@ -254,10 +293,12 @@ def _create_simple_pdf(file_path: str, title: str, content_lines: List[str], *in
             
             # Prepare content and calculate pages needed
             pages_content = _prepare_pdf_pages(title, content_lines, *info_lines)
+            num_pages = len(pages_content)
+            
+            log_info(f"PDF Structure: Creating PDF with {num_pages} pages")
             
             # Track object positions for xref table
             object_positions = {}
-            page_objects = []
             
             # Object 1: Catalog
             object_positions[1] = f.tell()
@@ -270,10 +311,11 @@ endobj
 '''
             f.write(catalog_obj)
             
-            # Object 2: Pages (parent)
+            # Object 2: Pages (parent) - build page references dynamically
             object_positions[2] = f.tell()
-            num_pages = len(pages_content)
-            page_refs = " ".join([f"{3 + i} 0 R" for i in range(num_pages)])
+            page_object_nums = [3 + i * 2 for i in range(num_pages)]  # Page objects: 3, 5, 7, 9, etc.
+            page_refs = " ".join([f"{num} 0 R" for num in page_object_nums])
+            
             pages_obj = f'''2 0 obj
 <<
 /Type /Pages
@@ -290,7 +332,9 @@ endobj
                 content_bytes = page_content.encode('utf-8')
                 content_length = len(content_bytes)
                 
-                # Page object
+                log_info(f"PDF Structure: Writing page {page_idx + 1} (objects {obj_counter}, {obj_counter + 1})")
+                
+                # Page object (odd numbered: 3, 5, 7, etc.)
                 object_positions[obj_counter] = f.tell()
                 page_obj = f'''{obj_counter} 0 obj
 <<
@@ -309,7 +353,7 @@ endobj
                 f.write(page_obj)
                 obj_counter += 1
                 
-                # Content stream object
+                # Content stream object (even numbered: 4, 6, 8, etc.)
                 object_positions[obj_counter] = f.tell()
                 content_obj = f'''{obj_counter} 0 obj
 <<
@@ -323,7 +367,7 @@ endobj
                 f.write(content_obj)
                 obj_counter += 1
             
-            # Font object
+            # Font object (last object)
             font_obj_num = obj_counter
             object_positions[font_obj_num] = f.tell()
             font_obj = f'''{font_obj_num} 0 obj
@@ -338,16 +382,26 @@ endobj
             
             # Cross-reference table
             xref_start = f.tell()
+            total_objects = font_obj_num + 1
+            
+            log_info(f"PDF Structure: Writing xref table for {total_objects} objects")
+            
             f.write(b'xref\n')
-            f.write(f'0 {font_obj_num + 1}\n'.encode())
-            f.write(b'0000000000 65535 f \n')
-            for i in range(1, font_obj_num + 1):
-                f.write(f'{object_positions[i]:010d} 00000 n \n'.encode())
+            f.write(f'0 {total_objects}\n'.encode())
+            f.write(b'0000000000 65535 f \n')  # Object 0 (always free)
+            
+            # Write xref entries for all objects
+            for i in range(1, total_objects):
+                if i in object_positions:
+                    f.write(f'{object_positions[i]:010d} 00000 n \n'.encode())
+                else:
+                    log_error(f"PDF Structure: Missing object position for object {i}")
+                    f.write(b'0000000000 00000 f \n')  # Mark as free if missing
             
             # Trailer
             trailer = f'''trailer
 <<
-/Size {font_obj_num + 1}
+/Size {total_objects}
 /Root 1 0 R
 >>
 startxref
@@ -356,7 +410,10 @@ startxref
 '''.encode('utf-8')
             f.write(trailer)
             
+            log_info(f"PDF Structure: Successfully created PDF with {num_pages} pages, {total_objects} objects")
+            
     except Exception as e:
+        log_error(f"Error creating PDF structure: {str(e)}")
         raise Exception(f"Error creating PDF structure: {str(e)}")
 
 def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -> List[str]:
@@ -373,8 +430,9 @@ def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -
     """
     try:
         pages = []
-        lines_per_page = 55  # Conservative estimate for 8pt font
-        header_lines = 8  # Space needed for title and info
+        lines_per_page = 55  # Conservative lines that fit on a page
+        first_page_content_lines = lines_per_page - 10  # Account for title and info
+        other_page_content_lines = lines_per_page - 4   # Account for page header
         
         # Wrap all content lines first
         wrapped_lines = []
@@ -388,35 +446,49 @@ def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -
                 wrapped_lines.extend(wrapped_content)
                 display_line_number += 1
         
+        # Debug information
+        total_wrapped_lines = len(wrapped_lines)
+        log_info(f"PDF Generation: Total content lines: {len(content_lines)}, Total wrapped lines: {total_wrapped_lines}")
+        
         # Split wrapped lines into pages
-        current_page_lines = []
-        remaining_space = lines_per_page - header_lines
+        processed_lines = 0
+        page_num = 1
         
-        for line in wrapped_lines:
-            if remaining_space <= 0:
-                # Start new page
-                if current_page_lines:
-                    pages.append(_create_page_content(title, current_page_lines, len(pages) + 1, *info_lines))
-                current_page_lines = []
-                remaining_space = lines_per_page - (5 if len(pages) > 0 else header_lines)  # Less header space on subsequent pages
+        while processed_lines < total_wrapped_lines:
+            is_first_page = (page_num == 1)
+            max_lines_this_page = first_page_content_lines if is_first_page else other_page_content_lines
             
-            current_page_lines.append(line)
-            remaining_space -= 1
-        
-        # Add the last page if there are remaining lines
-        if current_page_lines:
-            pages.append(_create_page_content(title, current_page_lines, len(pages) + 1, *info_lines))
+            # Get lines for this page
+            end_line = min(processed_lines + max_lines_this_page, total_wrapped_lines)
+            lines_for_this_page = wrapped_lines[processed_lines:end_line]
+            
+            if lines_for_this_page:
+                log_info(f"PDF Generation: Creating page {page_num} with {len(lines_for_this_page)} lines (processed {processed_lines}/{total_wrapped_lines})")
+                pages.append(_create_page_content(title, lines_for_this_page, page_num, is_first_page, *info_lines))
+                processed_lines = end_line
+                page_num += 1
+                
+                # Safety check to prevent infinite loops
+                if page_num > 100:  # Reasonable maximum
+                    log_error("PDF Generation: Hit page limit safety check - stopping")
+                    break
+            else:
+                log_info("PDF Generation: No more lines to process")
+                break
         
         # Ensure at least one page
         if not pages:
-            pages.append(_create_page_content(title, ["No content available."], 1, *info_lines))
+            log_warning("PDF Generation: No pages created, adding default page")
+            pages.append(_create_page_content(title, ["No content available."], 1, True, *info_lines))
         
+        log_info(f"PDF Generation: Created {len(pages)} pages total")
         return pages
         
     except Exception as e:
+        log_error(f"Error preparing PDF pages: {str(e)}")
         raise Exception(f"Error preparing PDF pages: {str(e)}")
 
-def _create_page_content(title: str, content_lines: List[str], page_number: int, *info_lines: str) -> str:
+def _create_page_content(title: str, content_lines: List[str], page_number: int, is_first_page: bool, *info_lines: str) -> str:
     """
     Create PDF content stream for a single page.
     
@@ -424,6 +496,7 @@ def _create_page_content(title: str, content_lines: List[str], page_number: int,
         title: Document title
         content_lines: List of content lines for this page
         page_number: Current page number
+        is_first_page: Whether this is the first page
         *info_lines: Additional info lines
     
     Returns:
@@ -434,45 +507,38 @@ def _create_page_content(title: str, content_lines: List[str], page_number: int,
         
         # Start content stream
         lines.append("BT")  # Begin text
+        lines.append("/F1 8 Tf")  # Set font early
         
-        y_position = 750  # Start near top of page
-        
-        if page_number == 1:
-            # Add title only on first page
-            lines.append(f"50 {y_position} Td")  # Move to position
+        if is_first_page:
+            # First page: full header with title and info
+            lines.append("50 750 Td")  # Move to top position
             lines.append("/F1 16 Tf")  # Larger font for title
             lines.append(f"({_escape_pdf_string(title)}) Tj")
-            y_position -= 30
             
-            # Add info lines only on first page
+            # Add info lines
             lines.append("/F1 10 Tf")  # Smaller font for info
             for info_line in info_lines:
-                lines.append(f"0 -{15} Td")  # Move down 15 points
+                lines.append("0 -15 Td")  # Move down 15 points
                 lines.append(f"({_escape_pdf_string(info_line)}) Tj")
-                y_position -= 15
             
-            y_position -= 20  # Extra space before content
+            lines.append("0 -20 Td")  # Extra space before content
+            lines.append("/F1 8 Tf")   # Set content font
         else:
-            # Subsequent pages: just show page number and title
-            lines.append(f"50 {y_position} Td")  # Move to position
+            # Subsequent pages: simple page header
+            lines.append("50 750 Td")  # Move to top position
             lines.append("/F1 12 Tf")  # Medium font for page header
             lines.append(f"({_escape_pdf_string(f'{title} - Page {page_number}')}) Tj")
-            y_position -= 25
+            lines.append("0 -25 Td")   # Move down before content
+            lines.append("/F1 8 Tf")   # Set content font
         
         # Add content lines
-        lines.append("/F1 8 Tf")  # Small font for content
-        if page_number == 1:
-            lines.append(f"0 -{20} Td")  # Move down from header
-        else:
-            lines.append(f"0 -{15} Td")  # Less space on subsequent pages
-        
-        for content_line in content_lines:
-            lines.append(f"0 -{12} Td")  # Move down 12 points
+        for i, content_line in enumerate(content_lines):
+            lines.append("0 -12 Td")  # Move down 12 points
             lines.append(f"({_escape_pdf_string(content_line)}) Tj")
         
-        # Add page number at bottom
-        lines.append(f"/F1 8 Tf")
-        lines.append(f"0 -{750 - len(content_lines) * 12} Td")  # Move to bottom
+        # Add page number at bottom (move to absolute position)
+        lines.append("50 30 Td")  # Move to bottom left (absolute position)
+        lines.append("/F1 8 Tf")  # Ensure font is set
         lines.append(f"({_escape_pdf_string(f'Page {page_number}')}) Tj")
         
         lines.append("ET")  # End text
@@ -480,7 +546,9 @@ def _create_page_content(title: str, content_lines: List[str], page_number: int,
         return "\n".join(lines)
         
     except Exception as e:
-        raise Exception(f"Error creating page content: {str(e)}")
+        log_error(f"Error creating page {page_number} content: {str(e)}")
+        # Return a minimal valid content stream if there's an error
+        return f"BT\n/F1 12 Tf\n50 400 Td\n(Error creating page {page_number} content: {_escape_pdf_string(str(e))}) Tj\nET"
 
 def _prepare_pdf_content(title: str, content_lines: List[str], *info_lines: str) -> str:
     """
@@ -583,5 +651,9 @@ def _escape_pdf_string(text: str) -> str:
 
 # Deprecated - replaced with session_start() and session_end()
 def blank() -> None:
-    """Add blank lines to separated erasuring process between different execution"""
-    session_end()
+    """DEPRECATED: This function used to end sessions prematurely. 
+    Use log_disk_completed() instead for individual disk completion,
+    and only call session_end() when the application actually exits."""
+    log_warning("DEPRECATED: blank() function called - this may cause premature session ending")
+    # Don't actually end the session - just log a warning
+    pass
