@@ -3,6 +3,7 @@ import sys
 import os
 from datetime import datetime
 from typing import List
+import textwrap
 
 # Define the log file path
 log_file = "/var/log/disk_erase.log"
@@ -59,6 +60,11 @@ def log_erase_operation(disk_id: str, filesystem: str, method: str) -> None:
     message = f"Erasure operation for disk ID: {disk_id}. Filesystem: {filesystem}. Erase method: {method}"
     logger.info(message)
 
+def log_disk_completed(disk_id: str) -> None:
+    """Log completion of operations on a single disk without ending session."""
+    message = f"Completed operations on disk ID: {disk_id}"
+    logger.info(message)
+
 def session_start() -> None:
     """Log session start with clear separator and begin session log capture"""
     global _session_logs, _session_active
@@ -94,6 +100,19 @@ def session_end() -> None:
         f.write(f"\n{separator}\n")
         f.write(f"SESSION END: {timestamp}\n")
         f.write(f"{separator}\n\n")
+
+def log_application_exit(exit_method: str = "Exit button") -> None:
+    """Log application exit and end session properly."""
+    log_info(f"Application closed by user via {exit_method}")
+    session_end()
+
+def log_erasure_process_completed() -> None:
+    """Log that the erasure process is completed but don't end session."""
+    log_info("Erasure process completed")
+
+def log_erasure_process_stopped() -> None:
+    """Log that the erasure process was stopped by user but don't end session."""
+    log_info("Erasure process stopped by user")
 
 def get_current_session_logs() -> List[str]:
     """Get all logs from the current session"""
@@ -220,6 +239,7 @@ def generate_log_file_pdf() -> str:
 def _create_simple_pdf(file_path: str, title: str, content_lines: List[str], *info_lines: str) -> None:
     """
     Create a simple PDF file using basic PDF structure without external libraries.
+    Supports multiple pages automatically.
     
     Args:
         file_path: Path where to save the PDF
@@ -232,13 +252,12 @@ def _create_simple_pdf(file_path: str, title: str, content_lines: List[str], *in
             # PDF Header
             f.write(b'%PDF-1.4\n')
             
-            # Prepare content first to get accurate length
-            content = _prepare_pdf_content(title, content_lines, *info_lines)
-            content_bytes = content.encode('utf-8')
-            content_length = len(content_bytes)
+            # Prepare content and calculate pages needed
+            pages_content = _prepare_pdf_pages(title, content_lines, *info_lines)
             
             # Track object positions for xref table
             object_positions = {}
+            page_objects = []
             
             # Object 1: Catalog
             object_positions[1] = f.tell()
@@ -251,73 +270,84 @@ endobj
 '''
             f.write(catalog_obj)
             
-            # Object 2: Pages
+            # Object 2: Pages (parent)
             object_positions[2] = f.tell()
-            pages_obj = b'''2 0 obj
+            num_pages = len(pages_content)
+            page_refs = " ".join([f"{3 + i} 0 R" for i in range(num_pages)])
+            pages_obj = f'''2 0 obj
 <<
 /Type /Pages
-/Kids [3 0 R]
-/Count 1
+/Kids [{page_refs}]
+/Count {num_pages}
 >>
 endobj
-'''
+'''.encode('utf-8')
             f.write(pages_obj)
             
-            # Object 3: Page
-            object_positions[3] = f.tell()
-            page_obj = b'''3 0 obj
+            # Create page objects and content streams
+            obj_counter = 3
+            for page_idx, page_content in enumerate(pages_content):
+                content_bytes = page_content.encode('utf-8')
+                content_length = len(content_bytes)
+                
+                # Page object
+                object_positions[obj_counter] = f.tell()
+                page_obj = f'''{obj_counter} 0 obj
 <<
 /Type /Page
 /Parent 2 0 R
 /MediaBox [0 0 612 792]
-/Contents 4 0 R
+/Contents {obj_counter + 1} 0 R
 /Resources <<
 /Font <<
-/F1 5 0 R
+/F1 {3 + num_pages * 2} 0 R
 >>
 >>
 >>
 endobj
-'''
-            f.write(page_obj)
-            
-            # Object 4: Content Stream
-            object_positions[4] = f.tell()
-            content_obj = f'''4 0 obj
+'''.encode('utf-8')
+                f.write(page_obj)
+                obj_counter += 1
+                
+                # Content stream object
+                object_positions[obj_counter] = f.tell()
+                content_obj = f'''{obj_counter} 0 obj
 <<
 /Length {content_length}
 >>
 stream
-{content}
+{page_content}
 endstream
 endobj
 '''.encode('utf-8')
-            f.write(content_obj)
+                f.write(content_obj)
+                obj_counter += 1
             
-            # Object 5: Font
-            object_positions[5] = f.tell()
-            font_obj = b'''5 0 obj
+            # Font object
+            font_obj_num = obj_counter
+            object_positions[font_obj_num] = f.tell()
+            font_obj = f'''{font_obj_num} 0 obj
 <<
 /Type /Font
 /Subtype /Type1
 /BaseFont /Courier
 >>
 endobj
-'''
+'''.encode('utf-8')
             f.write(font_obj)
             
             # Cross-reference table
             xref_start = f.tell()
             f.write(b'xref\n')
-            f.write(b'0 6\n')
+            f.write(f'0 {font_obj_num + 1}\n'.encode())
             f.write(b'0000000000 65535 f \n')
-            for i in range(1, 6):
+            for i in range(1, font_obj_num + 1):
                 f.write(f'{object_positions[i]:010d} 00000 n \n'.encode())
             
             # Trailer
             trailer = f'''trailer
 <<
-/Size 6
+/Size {font_obj_num + 1}
 /Root 1 0 R
 >>
 startxref
@@ -329,9 +359,9 @@ startxref
     except Exception as e:
         raise Exception(f"Error creating PDF structure: {str(e)}")
 
-def _prepare_pdf_content(title: str, content_lines: List[str], *info_lines: str) -> str:
+def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -> List[str]:
     """
-    Prepare PDF content stream with proper formatting.
+    Prepare PDF content split into multiple pages.
     
     Args:
         title: Document title
@@ -339,7 +369,65 @@ def _prepare_pdf_content(title: str, content_lines: List[str], *info_lines: str)
         *info_lines: Additional info lines
     
     Returns:
-        str: Formatted PDF content stream
+        List[str]: List of page contents (PDF content streams)
+    """
+    try:
+        pages = []
+        lines_per_page = 55  # Conservative estimate for 8pt font
+        header_lines = 8  # Space needed for title and info
+        
+        # Wrap all content lines first
+        wrapped_lines = []
+        display_line_number = 1
+        
+        if not content_lines:
+            wrapped_lines = ["No content available."]
+        else:
+            for content_line in content_lines:
+                wrapped_content = _wrap_log_line(content_line, display_line_number)
+                wrapped_lines.extend(wrapped_content)
+                display_line_number += 1
+        
+        # Split wrapped lines into pages
+        current_page_lines = []
+        remaining_space = lines_per_page - header_lines
+        
+        for line in wrapped_lines:
+            if remaining_space <= 0:
+                # Start new page
+                if current_page_lines:
+                    pages.append(_create_page_content(title, current_page_lines, len(pages) + 1, *info_lines))
+                current_page_lines = []
+                remaining_space = lines_per_page - (5 if len(pages) > 0 else header_lines)  # Less header space on subsequent pages
+            
+            current_page_lines.append(line)
+            remaining_space -= 1
+        
+        # Add the last page if there are remaining lines
+        if current_page_lines:
+            pages.append(_create_page_content(title, current_page_lines, len(pages) + 1, *info_lines))
+        
+        # Ensure at least one page
+        if not pages:
+            pages.append(_create_page_content(title, ["No content available."], 1, *info_lines))
+        
+        return pages
+        
+    except Exception as e:
+        raise Exception(f"Error preparing PDF pages: {str(e)}")
+
+def _create_page_content(title: str, content_lines: List[str], page_number: int, *info_lines: str) -> str:
+    """
+    Create PDF content stream for a single page.
+    
+    Args:
+        title: Document title
+        content_lines: List of content lines for this page
+        page_number: Current page number
+        *info_lines: Additional info lines
+    
+    Returns:
+        str: PDF content stream for this page
     """
     try:
         lines = []
@@ -349,53 +437,116 @@ def _prepare_pdf_content(title: str, content_lines: List[str], *info_lines: str)
         
         y_position = 750  # Start near top of page
         
-        # Add title
-        lines.append(f"50 {y_position} Td")  # Move to position
-        lines.append("/F1 16 Tf")  # Larger font for title
-        lines.append(f"({_escape_pdf_string(title)}) Tj")
-        y_position -= 30
-        
-        # Add info lines
-        lines.append("/F1 10 Tf")  # Smaller font for info
-        for info_line in info_lines:
-            lines.append(f"0 -{15} Td")  # Move down 15 points
-            lines.append(f"({_escape_pdf_string(info_line)}) Tj")
-            y_position -= 15
-        
-        y_position -= 20  # Extra space before content
+        if page_number == 1:
+            # Add title only on first page
+            lines.append(f"50 {y_position} Td")  # Move to position
+            lines.append("/F1 16 Tf")  # Larger font for title
+            lines.append(f"({_escape_pdf_string(title)}) Tj")
+            y_position -= 30
+            
+            # Add info lines only on first page
+            lines.append("/F1 10 Tf")  # Smaller font for info
+            for info_line in info_lines:
+                lines.append(f"0 -{15} Td")  # Move down 15 points
+                lines.append(f"({_escape_pdf_string(info_line)}) Tj")
+                y_position -= 15
+            
+            y_position -= 20  # Extra space before content
+        else:
+            # Subsequent pages: just show page number and title
+            lines.append(f"50 {y_position} Td")  # Move to position
+            lines.append("/F1 12 Tf")  # Medium font for page header
+            lines.append(f"({_escape_pdf_string(f'{title} - Page {page_number}')}) Tj")
+            y_position -= 25
         
         # Add content lines
         lines.append("/F1 8 Tf")  # Small font for content
-        lines.append(f"0 -{20} Td")  # Move down 20 points
-        
-        if not content_lines:
-            lines.append("(No content available.) Tj")
+        if page_number == 1:
+            lines.append(f"0 -{20} Td")  # Move down from header
         else:
-            line_number = 1
-            for content_line in content_lines:
-                if y_position < 50:  # Start new page if needed (simplified)
-                    lines.append("ET")  # End text block
-                    lines.append("BT")  # Begin new text block
-                    lines.append("/F1 8 Tf")
-                    lines.append("50 750 Td")
-                    y_position = 750
-                
-                # Truncate very long lines to fit on page
-                if len(content_line) > 85:
-                    content_line = content_line[:82] + "..."
-                
-                numbered_line = f"{line_number:4d}: {content_line}"
-                lines.append(f"0 -{12} Td")  # Move down 12 points
-                lines.append(f"({_escape_pdf_string(numbered_line)}) Tj")
-                y_position -= 12
-                line_number += 1
+            lines.append(f"0 -{15} Td")  # Less space on subsequent pages
+        
+        for content_line in content_lines:
+            lines.append(f"0 -{12} Td")  # Move down 12 points
+            lines.append(f"({_escape_pdf_string(content_line)}) Tj")
+        
+        # Add page number at bottom
+        lines.append(f"/F1 8 Tf")
+        lines.append(f"0 -{750 - len(content_lines) * 12} Td")  # Move to bottom
+        lines.append(f"({_escape_pdf_string(f'Page {page_number}')}) Tj")
         
         lines.append("ET")  # End text
         
         return "\n".join(lines)
         
     except Exception as e:
-        raise Exception(f"Error preparing PDF content: {str(e)}")
+        raise Exception(f"Error creating page content: {str(e)}")
+
+def _prepare_pdf_content(title: str, content_lines: List[str], *info_lines: str) -> str:
+    """
+    DEPRECATED: Use _prepare_pdf_pages instead for multi-page support.
+    Prepare PDF content stream with proper formatting and line wrapping.
+    
+    Args:
+        title: Document title
+        content_lines: List of content lines
+        *info_lines: Additional info lines
+    
+    Returns:
+        str: Formatted PDF content stream
+    """
+    # This function is kept for backward compatibility but should not be used
+    pages = _prepare_pdf_pages(title, content_lines, *info_lines)
+    return pages[0] if pages else "BT\n(No content available.)\nET"
+
+def _wrap_log_line(content_line: str, line_number: int, max_width: int = 75) -> List[str]:
+    """
+    Wrap a single log line into multiple lines if it's too long.
+    
+    Args:
+        content_line: The original log line
+        line_number: The line number to display
+        max_width: Maximum characters per line (accounting for line number prefix)
+    
+    Returns:
+        List[str]: List of wrapped lines with proper formatting
+    """
+    try:
+        # Calculate available width after line number prefix
+        line_prefix = f"{line_number:4d}: "
+        continuation_prefix = "      "  # 6 spaces to align with content
+        available_width = max_width - len(line_prefix)
+        
+        # Use textwrap to break long lines at word boundaries
+        wrapped_content = textwrap.fill(
+            content_line,
+            width=available_width,
+            break_long_words=True,
+            break_on_hyphens=True,
+            expand_tabs=True,
+            replace_whitespace=False
+        )
+        
+        wrapped_lines = wrapped_content.split('\n')
+        
+        # Format the lines with proper prefixes
+        formatted_lines = []
+        for i, line in enumerate(wrapped_lines):
+            if i == 0:
+                # First line gets the line number
+                formatted_lines.append(f"{line_prefix}{line}")
+            else:
+                # Continuation lines get indented to align with content
+                formatted_lines.append(f"{continuation_prefix}{line}")
+        
+        return formatted_lines
+        
+    except Exception as e:
+        # Fallback to simple truncation if wrapping fails
+        if len(content_line) > max_width - 6:
+            return [f"{line_number:4d}: {content_line[:max_width-9]}..."]
+        else:
+            return [f"{line_number:4d}: {content_line}"]
 
 def _escape_pdf_string(text: str) -> str:
     """
