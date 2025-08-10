@@ -6,7 +6,7 @@ set -e
 # Variables
 WORK_DIR="$(pwd)/debian-live-build"
 CODE_DIR="$(pwd)/../code"
-ISO_NAME="$(pwd)/diskEraserFr-v5.4.iso"
+ISO_NAME="$(pwd)/diskEraserFr-v5.3.iso"
 
 # Install necessary tools
 echo "Installing live-build and required dependencies..."
