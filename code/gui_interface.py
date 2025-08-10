@@ -5,12 +5,12 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from subprocess import CalledProcessError, SubprocessError
 from disk_erase import get_disk_serial, is_ssd
-from utils import get_disk_list, get_physical_drives_for_logical_volumes, get_base_disk
+from utils import get_disk_list, get_base_disk
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from log_handler import log_info, log_error, log_erase_operation, blank, generate_session_pdf, generate_log_file_pdf
+from log_handler import log_info, log_error, log_erase_operation, session_start, session_end, generate_session_pdf, generate_log_file_pdf
 from disk_operations import get_active_disk, process_disk
 import threading
-from typing import Optional, Dict, List, Callable, Any
+from typing import Dict, List
 
 class DiskEraserGUI:
     def __init__(self, root: tk.Tk) -> None:
@@ -28,8 +28,11 @@ class DiskEraserGUI:
         self.disk_progress: Dict[str, float] = {}
         self.active_disk = get_active_disk()
         
-        # Session logs for PDF generation
-        self.session_logs: List[str] = []
+        # Track if active drive message was logged
+        self.active_drive_logged = False
+        
+        # Start session logging - this will now automatically capture all log messages
+        session_start()
         
         # Check for root privileges
         if os.geteuid() != 0:
@@ -183,21 +186,41 @@ class DiskEraserGUI:
     def print_session_log(self) -> None:
         """Generate and save session log as PDF"""
         try:
-            if not self.session_logs:
-                messagebox.showwarning("Attention", "Pas de journal de session à imprimer.")
-                return
-            
             self.status_var.set("Génération du PDF du journal de session...")
-            pdf_path = generate_session_pdf(self.session_logs)
+            pdf_path = generate_session_pdf()
             
             success_msg = f"Session du journal PDF générée avec succès !\nEnregistré dans : {pdf_path}"
             messagebox.showinfo("PDF généré", success_msg)
             self.update_gui_log(f"Session du journal PDF enregistrée dans : {pdf_path}")
             self.status_var.set("Session du journal PDF générée")
             
-        except Exception as e:
-            error_msg = f"Erreur lors de la génération du PDF du journal de session : {str(e)}"
-            messagebox.showerror("Erreur", error_msg)
+        except (ImportError, ModuleNotFoundError) as e:
+            error_msg = f"Bibliothèque PDF non disponible : {str(e)}"
+            messagebox.showerror("Erreur de Bibliothèque", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except (IOError, OSError) as e:
+            error_msg = f"Erreur de système de fichiers lors de la génération du PDF du journal de session : {str(e)}"
+            messagebox.showerror("Erreur de Fichier", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except PermissionError as e:
+            error_msg = f"Permission refusée lors de la génération du PDF du journal de session : {str(e)}"
+            messagebox.showerror("Erreur de Permission", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except MemoryError:
+            error_msg = "Mémoire insuffisante pour générer le PDF du journal de session"
+            messagebox.showerror("Erreur de Mémoire", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except (ValueError, TypeError) as e:
+            error_msg = f"Erreur de format de données lors de la génération du PDF du journal de session : {str(e)}"
+            messagebox.showerror("Erreur de Données", error_msg)
             self.update_gui_log(error_msg)
             log_error(error_msg)
             self.status_var.set("Prêt")
@@ -205,7 +228,7 @@ class DiskEraserGUI:
     def print_complete_log(self) -> None:
         """Generate and save complete log file as PDF"""
         try:
-            self.status_var.set("Genération du PDF du journal complet...")
+            self.status_var.set("Génération du PDF du journal complet...")
             pdf_path = generate_log_file_pdf()
             
             success_msg = f"Journal complet PDF généré avec succès !\nEnregistré dans : {pdf_path}"
@@ -213,9 +236,39 @@ class DiskEraserGUI:
             self.update_gui_log(f"Journal complet PDF enregistré dans : {pdf_path}")
             self.status_var.set("PDF du journal complet généré")
             
-        except Exception as e:
-            error_msg = f"Erreur lors de la génération du PDF du journal complet : {str(e)}"
-            messagebox.showerror("Erreur", error_msg)
+        except (ImportError, ModuleNotFoundError) as e:
+            error_msg = f"Bibliothèque PDF non disponible : {str(e)}"
+            messagebox.showerror("Erreur de Bibliothèque", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except (IOError, OSError) as e:
+            error_msg = f"Erreur de système de fichiers lors de la génération du PDF du journal complet : {str(e)}"
+            messagebox.showerror("Erreur de Fichier", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except PermissionError as e:
+            error_msg = f"Permission refusée lors de la génération du PDF du journal complet : {str(e)}"
+            messagebox.showerror("Erreur de Permission", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except FileNotFoundError as e:
+            error_msg = f"Fichier journal non trouvé lors de la génération du PDF du journal complet : {str(e)}"
+            messagebox.showerror("Fichier Non Trouvé", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except MemoryError:
+            error_msg = "Mémoire insuffisante pour générer le PDF du journal complet"
+            messagebox.showerror("Erreur de Mémoire", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except (ValueError, TypeError) as e:
+            error_msg = f"Erreur de format de données lors de la génération du PDF du journal complet : {str(e)}"
+            messagebox.showerror("Erreur de Données", error_msg)
             self.update_gui_log(error_msg)
             log_error(error_msg)
             self.status_var.set("Prêt")
@@ -234,30 +287,42 @@ class DiskEraserGUI:
                     child.configure(state="normal")
                 else:
                     child.configure(state="disabled")
-            except tk.TclError:
+            except tk.TclError as e:
                 # Some widgets (like labels) may not support 'state'
-                pass
+                # Log the specific widget type that doesn't support state configuration
+                widget_type = type(child).__name__
+                self.update_gui_log(f"Le widget {widget_type} ne prend pas en charge la configuration d'état : {str(e)}")
 
         # Enable or disable passes entry
         for child in self.passes_frame.winfo_children():
             if isinstance(child, ttk.Entry):
-                if method == "crypto":
-                    child.configure(state="disabled")
-                else:
-                    child.configure(state="normal")
+                try:
+                    if method == "crypto":
+                        child.configure(state="disabled")
+                    else:
+                        child.configure(state="normal")
+                except tk.TclError as e:
+                    error_msg = f"Erreur lors de la configuration de l'état du widget d'entrée : {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
 
     def exit_application(self) -> None:
         """Log and close the application when Exit is clicked"""
         exit_message = "Application fermée par l'utilisateur via le bouton Quitter"
         log_info(exit_message)
         self.update_gui_log(exit_message)
-        blank()  # Add separator in log file
+        session_end()
         self.root.destroy()
     
     def toggle_fullscreen(self) -> None:
         """Toggle fullscreen mode"""
-        is_fullscreen = self.root.attributes("-fullscreen")
-        self.root.attributes("-fullscreen", not is_fullscreen)
+        try:
+            is_fullscreen = self.root.attributes("-fullscreen")
+            self.root.attributes("-fullscreen", not is_fullscreen)
+        except tk.TclError as e:
+            error_msg = f"Erreur lors du basculement en mode plein écran : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
 
     def refresh_disks(self) -> None:
         # Clear existing disk checkboxes
@@ -267,7 +332,23 @@ class DiskEraserGUI:
         self.disk_vars = {}
         
         # Get list of disks using the common function
-        self.disks = get_disk_list()
+        try:
+            self.disks = get_disk_list()
+        except (CalledProcessError, SubprocessError) as e:
+            error_msg = f"Erreur lors de l'obtention de la liste des disques : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.disks = []
+        except FileNotFoundError as e:
+            error_msg = f"Commande utilitaire de disque requise non trouvée : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.disks = []
+        except (IOError, OSError) as e:
+            error_msg = f"Erreur système lors de l'accès aux informations des disques : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.disks = []
         
         if not self.disks:
             no_disk_label = ttk.Label(self.scrollable_disk_frame, text="Aucun disque trouvé")
@@ -275,22 +356,48 @@ class DiskEraserGUI:
             self.disclaimer_var.set("")
             self.ssd_disclaimer_var.set("")
             self.update_gui_log("Aucun disque trouvé.")
+            log_info("Aucun disque trouvé lors de l'actualisation des disques")
             return
         
         # Get active device(s) - now always returns a list or None with LVM resolution built-in
-        active_device = get_active_disk()
+        try:
+            active_device = get_active_disk()
+        except (CalledProcessError, SubprocessError) as e:
+            error_msg = f"Erreur lors de la détection du disque actif : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            active_device = None
+        except FileNotFoundError as e:
+            error_msg = f"Commande requise non trouvée pour la détection du disque actif : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            active_device = None
+        except (IOError, OSError) as e:
+            error_msg = f"Erreur système lors de la détection du disque actif : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            active_device = None
+        
         active_physical_drives = set()
         
         if active_device:
             # get_active_disk() now always returns a list of physical disk names with LVM already resolved
             for dev in active_device:
-                active_physical_drives.add(get_base_disk(dev))
-            log_info(f"Active physical devices: {active_physical_drives}")
+                try:
+                    active_physical_drives.add(get_base_disk(dev))
+                except (ValueError, TypeError) as e:
+                    error_msg = f"Erreur lors du traitement du nom de périphérique {dev} : {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+            
+            # Only log once per session
+            if not self.active_drive_logged and active_physical_drives:
+                log_info(f"Périphériques physiques actifs : {active_physical_drives}")
+                self.active_drive_logged = True
             
         # Set disclaimer if we found an active disk
         if active_physical_drives:
             self.disclaimer_var.set(f"ATTENTION : Le disque marqué en rouge contient le système de fichiers actif. L'effacement de ce disque est bloqué pour éviter une défaillance du système et une perte de données !")
-
         else:
             self.disclaimer_var.set("")
         
@@ -298,13 +405,21 @@ class DiskEraserGUI:
         has_ssd = False
         for disk in self.disks:
             device_name = disk['Appareil'].replace('/dev/', '')
-            if is_ssd(device_name):
-                has_ssd = True
-                break
+            try:
+                if is_ssd(device_name):
+                    has_ssd = True
+                    break
+            except (CalledProcessError, SubprocessError) as e:
+                error_msg = f"Erreur lors de la vérification si {device_name} est un SSD : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+            except FileNotFoundError as e:
+                error_msg = f"Commande requise non trouvée pour la détection SSD : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
                 
         if has_ssd:
-            self.ssd_disclaimer_var.set("ATTENTION : Périphériques electroniques détectés. L'effacement en plusieurs passes peut endommager les disques electroniques et NE PAS réussir à supprimer les données en toute sécurité en raison de la répartition d'usure des SSD. Pour les disques electroniques, utilisez le mode d'effacement cryptographique.")
-
+            self.ssd_disclaimer_var.set("ATTENTION : Périphériques électroniques détectés. L'effacement en plusieurs passes peut endommager les disques électroniques et NE PAS réussir à supprimer les données en toute sécurité en raison de la répartition d'usure des SSD. Pour les disques électroniques, utilisez le mode d'effacement cryptographique.")
         else:
             self.ssd_disclaimer_var.set("")
         
@@ -321,21 +436,53 @@ class DiskEraserGUI:
             var = tk.BooleanVar(value=False)
             self.disk_vars[disk['Appareil']] = var
             
-            
             # Get disk information
             device_name = disk['Appareil'].replace('/dev/', '')
-            disk_identifier = get_disk_serial(device_name)
-            is_device_ssd = is_ssd(device_name)
-            ssd_indicator = " (Electronique)" if is_device_ssd else " (Mécanique)"
+            
+            # Get disk identifier with error handling
+            try:
+                disk_identifier = get_disk_serial(device_name)
+            except (CalledProcessError, SubprocessError) as e:
+                disk_identifier = f"{device_name} (Numéro de série non disponible)"
+                error_msg = f"Erreur lors de l'obtention du numéro de série pour {device_name} : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+            except FileNotFoundError as e:
+                disk_identifier = f"{device_name} (Commande de numéro de série non trouvée)"
+                error_msg = f"Commande requise non trouvée pour obtenir le numéro de série de {device_name} : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+            
+            # Check if SSD with error handling
+            try:
+                is_device_ssd = is_ssd(device_name)
+                ssd_indicator = " (Électronique)" if is_device_ssd else " (Mécanique)"
+            except (CalledProcessError, SubprocessError) as e:
+                ssd_indicator = " (Type inconnu)"
+                error_msg = f"Erreur lors de la détermination du type de disque pour {device_name} : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+            except FileNotFoundError as e:
+                ssd_indicator = " (Détection de type non disponible)"
+                error_msg = f"Commande requise non trouvée pour la détection du type de disque de {device_name} : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
             
             # Determine if this is the active disk
-            base_device_name = get_base_disk(device_name)
-            is_active = base_device_name in active_physical_drives
+            try:
+                base_device_name = get_base_disk(device_name)
+                is_active = base_device_name in active_physical_drives
+            except (ValueError, TypeError) as e:
+                is_active = False
+                error_msg = f"Erreur lors de la détermination du périphérique de base pour {device_name} : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+            
             active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
             
             # Get disk label from the updated utils
             disk_label = disk.get('Étiquette', 'Aucune étiquette')
-            label_indicator = f" [Etiquette: {disk_label}]" if disk_label and disk_label != "Aucune étiquette" else " [Aucune étiquette]"
+            label_indicator = f" [Étiquette: {disk_label}]" if disk_label and disk_label != "Aucune étiquette" else " [Aucune étiquette]"
             
             # Set text color
             text_color = "red" if is_active else "blue" if is_device_ssd else "black"
@@ -398,19 +545,28 @@ class DiskEraserGUI:
         if erase_method == "overwrite":
             for disk in selected_disks:
                 disk_name = disk.replace('/dev/', '')
-                if is_ssd(disk_name):
-                    ssd_selected = True
-                    break
+                try:
+                    if is_ssd(disk_name):
+                        ssd_selected = True
+                        break
+                except (CalledProcessError, SubprocessError) as e:
+                    error_msg = f"Erreur lors de la vérification de l'état SSD pour {disk_name} : {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                except FileNotFoundError as e:
+                    error_msg = f"Commande de détection SSD non trouvée pour {disk_name} : {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
                     
             if ssd_selected:
-                if not messagebox.askyesno("WARNING - SSD DEVICE SELECTED", 
-                                          "WARNING: You have selected one or more SSD devices!\n\n"
-                                          "Using multiple-pass erasure on SSDs can:\n"
-                                          "• Damage the SSD by causing excessive wear\n"
-                                          "• Fail to securely erase data due to SSD wear leveling\n"
-                                          "• Not overwrite all sectors due to over-provisioning\n\n"
-                                          "For SSDs, use cryptographic erasure \n\n"
-                                          "Do you still want to continue?",
+                if not messagebox.askyesno("AVERTISSEMENT - PÉRIPHÉRIQUE SSD SÉLECTIONNÉ", 
+                                          "AVERTISSEMENT : Vous avez sélectionné un ou plusieurs périphériques SSD !\n\n"
+                                          "L'utilisation de l'effacement multi-passes sur les SSD peut :\n"
+                                          "• Endommager le SSD en causant une usure excessive\n"
+                                          "• Échouer à effacer de manière sécurisée les données en raison de la répartition d'usure des SSD\n"
+                                          "• Ne pas écraser tous les secteurs en raison du sur-provisionnement\n\n"
+                                          "Pour les SSD, utilisez l'effacement cryptographique\n\n"
+                                          "Voulez-vous quand même continuer ?",
                                           icon="warning"):
                     return
         
@@ -418,13 +574,39 @@ class DiskEraserGUI:
         disk_identifiers = []
         for disk in selected_disks:
             disk_name = disk.replace('/dev/', '')
-            disk_identifier = get_disk_serial(disk_name)
+            try:
+                disk_identifier = get_disk_serial(disk_name)
+            except (CalledProcessError, SubprocessError) as e:
+                disk_identifier = f"{disk_name} (Numéro de série non disponible)"
+                error_msg = f"Erreur lors de l'obtention du numéro de série pour la journalisation : {disk_name}: {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+            except FileNotFoundError as e:
+                disk_identifier = f"{disk_name} (Commande de numéro de série non trouvée)"
+                error_msg = f"Commande de détection de numéro de série non trouvée pour la journalisation : {disk_name}: {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+            
             disk_identifiers.append(disk_identifier)
             
             # Log detailed erasure operation for each disk
             fs_choice = self.filesystem_var.get()
-            method_description = "cryptographic erasure" if erase_method == "crypto" else f"standard {self.passes_var.get()}-pass overwrite"
-            log_erase_operation(disk_identifier, fs_choice, method_description)
+            if erase_method == "crypto":
+                fill_method = self.crypto_fill_var.get()
+                method_description = f"effacement cryptographique avec remplissage {fill_method}"
+            else:
+                method_description = f"écrasement standard en {self.passes_var.get()} passes"
+            
+            try:
+                log_erase_operation(disk_identifier, fs_choice, method_description)
+            except (IOError, OSError) as e:
+                error_msg = f"Erreur lors de la journalisation de l'opération d'effacement pour {disk_identifier} : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+            except (ValueError, TypeError) as e:
+                error_msg = f"Données invalides pour la journalisation de l'opération d'effacement pour {disk_identifier} : {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
         
         # Confirm erasure
         disk_list = "\n".join(disk_identifiers)
@@ -459,50 +641,105 @@ class DiskEraserGUI:
             except ValueError:
                 messagebox.showerror("Erreur", "Le nombre de passes doit être un entier valide")
                 return
-        
-        # Clear session logs for new operation
-        self.session_logs = []
+            except OverflowError:
+                messagebox.showerror("Erreur", "Le nombre de passes est trop grand")
+                return
         
         # Start processing in a separate thread
         self.status_var.set("Démarrage du processus d'effacement...")
-        threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes, erase_method), daemon=True).start()
+        try:
+            threading.Thread(target=self.progress_state, args=(selected_disks, fs_choice, passes, erase_method), daemon=True).start()
+        except RuntimeError as e:
+            error_msg = f"Erreur lors du démarrage du thread d'effacement : {str(e)}"
+            messagebox.showerror("Erreur de Thread", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
+        except OSError as e:
+            error_msg = f"Erreur système lors du démarrage du processus d'effacement : {str(e)}"
+            messagebox.showerror("Erreur Système", error_msg)
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+            self.status_var.set("Prêt")
     
     def progress_state(self, disks: List[str], fs_choice: str, passes: int, erase_method: str) -> None:
-        method_str = "effacement cryptographique" if erase_method == "crypto" else f"écrasement standard en {passes} passes"
-        self.update_gui_log(f"Démarrage de l'effacement sécurisé de {len(disks)} disque(s) en utilisant {method_str}")
-        log_info(f"Démarrage de l'effacement sécurisé de {len(disks)} disque(s) en utilisant {method_str}")
-        self.update_gui_log(f"Système de fichiers sélectionné : {fs_choice}")
-        log_info(f"Système de fichiers sélectionné : {fs_choice}")
+        if erase_method == "crypto":
+            fill_method = self.crypto_fill_var.get()
+            method_str = f"effacement cryptographique avec remplissage {fill_method}"
+        else:
+            method_str = f"écrasement standard en {passes} passes"
+        
+        start_msg = f"Démarrage de l'effacement sécurisé de {len(disks)} disque(s) en utilisant {method_str}"
+        fs_msg = f"Système de fichiers sélectionné : {fs_choice}"
+        
+        self.update_gui_log(start_msg)
+        log_info(start_msg)
+        
+        self.update_gui_log(fs_msg)
+        log_info(fs_msg)
         
         total_disks = len(disks)
         completed_disks = 0
         
-        with ThreadPoolExecutor() as executor:
-            # Create a dictionary to track progress for each disk
-            self.disk_progress = {disk: 0 for disk in disks}
-            
-            # Submit all disk tasks
-            futures = {executor.submit(self.process_disk_wrapper, disk, fs_choice, passes, erase_method): disk for disk in disks}
-            
-            # Process results as they complete
-            for future in as_completed(futures):
-                disk = futures[future]
-                try:
-                    future.result()
-                    completed_disks += 1
-                    self.update_progress((completed_disks / total_disks) * 100)
-                    self.status_var.set(f"Terminé {completed_disks}/{total_disks} disques")
-                except (CalledProcessError, FileNotFoundError, PermissionError, OSError) as e:
-                    error_msg = f"Erreur lors du traitement du disque {disk} : {str(e)}"
-                    self.update_gui_log(error_msg)
-                    log_error(error_msg)
-                except KeyboardInterrupt:
-                    error_msg = "Opération interrompue par l'utilisateur"
-                    self.update_gui_log(error_msg)
-                    log_error(error_msg)
-            
-        self.status_var.set("Processus d'effacement terminé")
-        messagebox.showinfo("Terminé", "L'opération d'effacement des disques est terminée !")
+        try:
+            with ThreadPoolExecutor() as executor:
+                # Create a dictionary to track progress for each disk
+                self.disk_progress = {disk: 0 for disk in disks}
+                
+                # Submit all disk tasks
+                futures = {executor.submit(self.process_disk_wrapper, disk, fs_choice, passes, erase_method): disk for disk in disks}
+                
+                # Process results as they complete
+                for future in as_completed(futures):
+                    disk = futures[future]
+                    try:
+                        future.result()
+                        completed_disks += 1
+                        self.update_progress((completed_disks / total_disks) * 100)
+                        self.status_var.set(f"Terminé {completed_disks}/{total_disks} disques")
+                    except (CalledProcessError, FileNotFoundError, PermissionError, OSError) as e:
+                        error_msg = f"Erreur lors du traitement du disque {disk} : {str(e)}"
+                        self.update_gui_log(error_msg)
+                        log_error(error_msg)
+                    except KeyboardInterrupt:
+                        error_msg = "Opération interrompue par l'utilisateur"
+                        self.update_gui_log(error_msg)
+                        log_error(error_msg)
+                    except MemoryError:
+                        error_msg = f"Mémoire insuffisante lors du traitement du disque {disk}"
+                        self.update_gui_log(error_msg)
+                        log_error(error_msg)
+                    except RuntimeError as e:
+                        error_msg = f"Erreur d'exécution lors du traitement du disque {disk} : {str(e)}"
+                        self.update_gui_log(error_msg)
+                        log_error(error_msg)
+                    except (ValueError, TypeError) as e:
+                        error_msg = f"Erreur de données invalides lors du traitement du disque {disk} : {str(e)}"
+                        self.update_gui_log(error_msg)
+                        log_error(error_msg)
+        
+        except RuntimeError as e:
+            error_msg = f"Erreur avec l'exécuteur de pool de threads : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+        except OSError as e:
+            error_msg = f"Erreur système pendant le traitement des disques : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+        except MemoryError:
+            error_msg = "Mémoire insuffisante pour les opérations de pool de threads"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+        
+        complete_msg = "Processus d'effacement terminé"
+        self.status_var.set(complete_msg)
+        log_info(complete_msg)
+        try:
+            messagebox.showinfo("Terminé", "L'opération d'effacement des disques est terminée !")
+        except tk.TclError as e:
+            error_msg = f"Erreur lors de l'affichage de la boîte de dialogue de fin : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
     
     def process_disk_wrapper(self, disk: str, fs_choice: str, passes: int, erase_method: str) -> None:
         """
@@ -528,14 +765,15 @@ class DiskEraserGUI:
             self.update_gui_log(f"Erreur OS : {str(e)}")
             self.status_var.set(f"Effacement de {disk_name}...")
         
-        # Define GUI log callback for process_disk
+        # Define GUI log callback for process_disk (only for display, not session logs)
         def gui_log_callback(message: str) -> None:
             self.update_gui_log(message)
         
         try:
             # Call process_disk from disk_operations
             use_crypto = (erase_method == "crypto")
-            process_disk(disk_name, fs_choice, passes, use_crypto, log_func=gui_log_callback)
+            crypto_fill = self.crypto_fill_var.get() if use_crypto else "random"
+            process_disk(disk_name, fs_choice, passes, use_crypto, crypto_fill, log_func=gui_log_callback)
             
         except CalledProcessError as e:
             self.update_gui_log(f"Erreur de processus : {str(e)}")
@@ -552,25 +790,78 @@ class DiskEraserGUI:
         except KeyboardInterrupt:
             self.update_gui_log("Opération interrompue par l'utilisateur")
             raise
+        except MemoryError:
+            self.update_gui_log(f"Mémoire insuffisante lors du traitement de {disk_name}")
+            raise
+        except (ValueError, TypeError) as e:
+            self.update_gui_log(f"Erreur de paramètre invalide pour {disk_name} : {str(e)}")
+            raise
+        except RuntimeError as e:
+            self.update_gui_log(f"Erreur d'exécution lors du traitement de {disk_name} : {str(e)}")
+            raise
     
     def update_progress(self, value: float) -> None:
-        self.progress_var.set(value)
-        self.root.update_idletasks()
+        try:
+            self.progress_var.set(value)
+            self.root.update_idletasks()
+        except tk.TclError as e:
+            error_msg = f"Erreur lors de la mise à jour de la barre de progression : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
+        except (ValueError, TypeError) as e:
+            error_msg = f"Valeur de progression invalide : {str(e)}"
+            self.update_gui_log(error_msg)
+            log_error(error_msg)
     
     def update_gui_log(self, message: str) -> None:
-        """Update both the GUI log window and session logs with a message."""
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        log_message = f"[{timestamp}] {message}\n"
+        """Update the GUI log window with a message (for display only)."""
+        try:
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            log_message = f"[{timestamp}] {message}\n"
 
-        # Update log in the GUI
-        self.log_text.insert(tk.END, log_message)
-        self.log_text.see(tk.END)
-        
-        # Add to session logs for PDF generation
-        self.session_logs.append(f"[{timestamp}] {message}")
+            # Update log in the GUI
+            self.log_text.insert(tk.END, log_message)
+            self.log_text.see(tk.END)
+        except tk.TclError as e:
+            # If GUI log fails, at least try to log the error
+            error_msg = f"Erreur lors de la mise à jour du journal GUI : {str(e)}"
+            try:
+                log_error(error_msg)
+            except (IOError, OSError):
+                # If even logging fails, we can't do much more
+                pass
+        except (ValueError, TypeError) as e:
+            error_msg = f"Données invalides pour la mise à jour du journal GUI : {str(e)}"
+            try:
+                log_error(error_msg)
+            except (IOError, OSError):
+                pass
+        except OSError as e:
+            error_msg = f"Erreur système lors de la mise à jour du journal GUI : {str(e)}"
+            try:
+                log_error(error_msg)
+            except (IOError, OSError):
+                pass
 
 def run_gui_mode() -> None:
     """Run the GUI version"""
-    root = tk.Tk()
-    app = DiskEraserGUI(root)
-    root.mainloop()
+    try:
+        root = tk.Tk()
+        app = DiskEraserGUI(root)
+        root.mainloop()
+    except tk.TclError as e:
+        print(f"Erreur d'initialisation GUI : {str(e)}")
+        log_error(f"Erreur d'initialisation GUI : {str(e)}")
+        sys.exit(1)
+    except (ImportError, ModuleNotFoundError) as e:
+        print(f"Bibliothèque GUI requise non disponible : {str(e)}")
+        log_error(f"Bibliothèque GUI requise non disponible : {str(e)}")
+        sys.exit(1)
+    except MemoryError:
+        print("Mémoire insuffisante pour démarrer l'interface graphique")
+        log_error("Mémoire insuffisante pour démarrer l'interface graphique")
+        sys.exit(1)
+    except OSError as e:
+        print(f"Erreur système lors du démarrage de l'interface graphique : {str(e)}")
+        log_error(f"Erreur système lors du démarrage de l'interface graphique : {str(e)}")
+        sys.exit(1)

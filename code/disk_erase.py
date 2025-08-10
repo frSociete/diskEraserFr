@@ -155,6 +155,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
     
     Args:
         device (str): Device name (without /dev/ prefix, e.g. 'sda')
+        filling_method (str): Fill method - "random" or "zero"
         log_func (callable, optional): Function for logging output in real-time (e.g., for GUI)
         
     Returns:
@@ -224,7 +225,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             raise subprocess.CalledProcessError(cryptsetup_process.returncode, "cryptsetup")
         
         # Step 3: Fill the encrypted volume with zeroes or random data for added security
-        fill_msg = "Opening encrypted device to fill with random data..."
+        fill_msg = "Opening encrypted device to fill with data..."
         logging.info(fill_msg)
         if log_func:
             log_func(fill_msg)
@@ -238,34 +239,34 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             stderr=subprocess.PIPE
         )
         
-        fill_data_msg = "Filling encrypted device with random data (this may take a while)..."
-        logging.info(fill_data_msg)
-        if log_func:
-            log_func(fill_data_msg)
-            
-        # Fill with zeros (faster) or random data (more secure but slower)
-        # Using random but c
-        # Using dd with status=progress to show progress
+        # FIXED: Properly handle the filling method selection
         if filling_method == "random":
+            fill_data_msg = "Filling encrypted device with random data (this may take a while)..."
+            logging.info(fill_data_msg)
             if log_func:
-                log_func("Filling encrypted device with random data...")
-                fill_process = subprocess.Popen(
-                    ["dd", "if=/dev/urandom", f"of=/dev/mapper/temp_{device}", 
-                    "bs=4M", "status=progress"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True
-                )
+                log_func(fill_data_msg)
+                
+            fill_process = subprocess.Popen(
+                ["dd", "if=/dev/urandom", f"of=/dev/mapper/temp_{device}", 
+                "bs=4M", "status=progress"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True
+            )
         else:  # "zero" filling method
+            fill_data_msg = "Filling encrypted device with zeros (this may take a while)..."
+            logging.info(fill_data_msg)
             if log_func:
-                log_func("Filling encrypted device with zeros...")
-                fill_process = subprocess.Popen(
-                    ["dd", "if=/dev/zero", f"of=/dev/mapper/temp_{device}", 
-                    "bs=4M", "status=progress"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True
-                )
+                log_func(fill_data_msg)
+                
+            fill_process = subprocess.Popen(
+                ["dd", "if=/dev/zero", f"of=/dev/mapper/temp_{device}", 
+                "bs=4M", "status=progress"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True
+            )
+            
         # Read output in real-time to show progress
         while True:
             try:
@@ -325,8 +326,9 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             stderr=subprocess.PIPE
         )
         
-        # Log success message
-        success_message = f"Disk {device} successfully erased using cryptographic method."
+        # Log success message with correct fill method
+        fill_method_str = "random data" if filling_method == "random" else "zero data"
+        success_message = f"Disk {device} successfully erased using cryptographic method with {fill_method_str} filling."
         logging.info(success_message)
         if log_func:
             log_func(success_message)
