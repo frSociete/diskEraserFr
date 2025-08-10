@@ -64,6 +64,18 @@ def print_disk_details(disk):
         print(f"Error getting disk details: {str(e)}")
         log_error(f"Error getting disk details for {disk}: {str(e)}")
         return f"unknown_{disk}", False, False
+    except (OSError, IOError) as e:
+        print(f"System error getting disk details: {str(e)}")
+        log_error(f"System error getting disk details for {disk}: {str(e)}")
+        return f"unknown_{disk}", False, False
+    except (AttributeError, KeyError, IndexError) as e:
+        print(f"Data structure error getting disk details: {str(e)}")
+        log_error(f"Data structure error getting disk details for {disk}: {str(e)}")
+        return f"unknown_{disk}", False, False
+    except (TypeError, ValueError) as e:
+        print(f"Data type error getting disk details: {str(e)}")
+        log_error(f"Data type error getting disk details for {disk}: {str(e)}")
+        return f"unknown_{disk}", False, False
 
 def select_disks() -> list[str]:
     """
@@ -115,8 +127,12 @@ def select_disks() -> list[str]:
                 
                 print(f"{disk:<12} {disk_size:<8} {model_display:<20} {label_display:<15} {disk_type:<12} {status}")
                 
-            except Exception as e:
-                print(f"{disk:<12} Error retrieving disk information: {str(e)}")
+            except (SubprocessError, OSError, IOError) as e:
+                print(f"{disk:<12} System error retrieving disk information: {str(e)}")
+            except (FileNotFoundError, PermissionError) as e:
+                print(f"{disk:<12} Access error retrieving disk information: {str(e)}")
+            except (AttributeError, KeyError, IndexError, TypeError, ValueError) as e:
+                print(f"{disk:<12} Data error retrieving disk information: {str(e)}")
         
         print("-" * 80)
 
@@ -153,8 +169,11 @@ def select_disks() -> list[str]:
     except KeyboardInterrupt:
         log_error("Disk selection interrupted by user (Ctrl+C)")
         sys.exit(130)
-    except IOError as e:
-        log_error(f"I/O error: {str(e)}")
+    except (IOError, OSError) as e:
+        log_error(f"System error during disk selection: {str(e)}")
+        return []
+    except (AttributeError, TypeError) as e:
+        log_error(f"Data processing error during disk selection: {str(e)}")
         return []
 
 def get_erasure_method():
@@ -196,6 +215,10 @@ def get_erasure_method():
         except KeyboardInterrupt:
             print("\nOperation cancelled.")
             sys.exit(130)
+        except (EOFError, IOError) as e:
+            print(f"\nInput error: {str(e)}")
+            print("Operation cancelled.")
+            sys.exit(1)
 
 def get_passes():
     """Get number of passes for overwrite method"""
@@ -222,6 +245,10 @@ def get_passes():
         except KeyboardInterrupt:
             print("\nOperation cancelled.")
             sys.exit(130)
+        except (EOFError, IOError) as e:
+            print(f"\nInput error: {str(e)}")
+            print("Operation cancelled.")
+            sys.exit(1)
 
 def confirm_erasure(disk: str, fs_choice: str, method_description: str) -> bool:
     """
@@ -259,6 +286,9 @@ def confirm_erasure(disk: str, fs_choice: str, method_description: str) -> bool:
         except KeyboardInterrupt:
             log_error("Erasure confirmation interrupted by user (Ctrl+C)")
             sys.exit(130)
+        except (EOFError, IOError) as e:
+            log_error(f"Input error during erasure confirmation: {str(e)}")
+            return False
 
 def get_disk_confirmations(disks: list[str], fs_choice: str, passes: int, use_crypto: bool, crypto_fill: str) -> list[str]:
     """Get confirmation for each disk with operation details."""
@@ -296,8 +326,8 @@ def print_log_menu() -> None:
         except KeyboardInterrupt:
             print("\nReturning to main menu...")
             break
-        except (IOError, OSError) as e:
-            print(f"Error: {str(e)}")
+        except (EOFError, IOError, OSError) as e:
+            print(f"Input/Output error: {str(e)}")
 
 def print_session_log_cli() -> None:
     """Generate and save session log as PDF (CLI version)"""
@@ -315,8 +345,20 @@ def print_session_log_cli() -> None:
         print(f"Saved to: {pdf_path}")
         log_info(f"Session log PDF saved to: {pdf_path}")
         
-    except Exception as e:
-        error_msg = f"Error generating session log PDF: {str(e)}"
+    except (FileNotFoundError, PermissionError) as e:
+        error_msg = f"File access error generating session log PDF: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+    except (IOError, OSError) as e:
+        error_msg = f"System error generating session log PDF: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+    except (ImportError, AttributeError) as e:
+        error_msg = f"Module/dependency error generating session log PDF: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+    except (TypeError, ValueError) as e:
+        error_msg = f"Data processing error generating session log PDF: {str(e)}"
         print(error_msg)
         log_error(error_msg)
 
@@ -330,8 +372,20 @@ def print_complete_log_cli() -> None:
         print(f"Saved to: {pdf_path}")
         log_info(f"Complete log PDF saved to: {pdf_path}")
         
-    except Exception as e:
-        error_msg = f"Error generating complete log PDF: {str(e)}"
+    except (FileNotFoundError, PermissionError) as e:
+        error_msg = f"File access error generating complete log PDF: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+    except (IOError, OSError) as e:
+        error_msg = f"System error generating complete log PDF: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+    except (ImportError, AttributeError) as e:
+        error_msg = f"Module/dependency error generating complete log PDF: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+    except (TypeError, ValueError) as e:
+        error_msg = f"Data processing error generating complete log PDF: {str(e)}"
         print(error_msg)
         log_error(error_msg)
 
@@ -367,22 +421,27 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, crypto_fill="ran
         log_info(success_msg)
         return True
     except (CalledProcessError, SubprocessError) as e:
-        error_msg = f"Error processing disk /dev/{disk}: {str(e)}"
+        error_msg = f"Command execution error processing disk /dev/{disk}: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         return False
-    except IOError as e:
-        error_msg = f"I/O error while processing disk /dev/{disk}: {str(e)}"
+    except (IOError, OSError) as e:
+        error_msg = f"System error while processing disk /dev/{disk}: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         return False
-    except OSError as e:
-        error_msg = f"OS error while processing disk /dev/{disk}: {str(e)}"
+    except (FileNotFoundError, PermissionError) as e:
+        error_msg = f"Access error while processing disk /dev/{disk}: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         return False
-    except ValueError as e:
-        error_msg = f"Value error while processing disk /dev/{disk}: {str(e)}"
+    except (ValueError, TypeError) as e:
+        error_msg = f"Data validation error while processing disk /dev/{disk}: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+        return False
+    except (ImportError, AttributeError) as e:
+        error_msg = f"Module/dependency error while processing disk /dev/{disk}: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         return False
@@ -456,8 +515,11 @@ def run_disk_erasure_operation(args=None):
                     result = future.result()
                     if result:
                         completed += 1
-                except (RuntimeError, ValueError) as e:
-                    error_msg = f"Error processing disk: {str(e)}"
+                except (RuntimeError, ValueError, TypeError) as e:
+                    error_msg = f"Thread execution error processing disk: {str(e)}"
+                    log_error(error_msg)
+                except (TimeoutError, InterruptedError) as e:
+                    error_msg = f"Thread timeout/interrupt error processing disk: {str(e)}"
                     log_error(error_msg)
         
         completion_msg = f"Completed operations on {completed}/{len(confirmed_disks)} disks."
@@ -468,8 +530,16 @@ def run_disk_erasure_operation(args=None):
         interrupt_msg = "Disk erasure operation interrupted by user (Ctrl+C)"
         print(f"\n{interrupt_msg}")
         log_error(interrupt_msg)
-    except Exception as e:
-        error_msg = f"Unexpected error during disk erasure operation: {str(e)}"
+    except (AttributeError, TypeError) as e:
+        error_msg = f"Configuration/argument error during disk erasure operation: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+    except (ImportError, ModuleNotFoundError) as e:
+        error_msg = f"Module import error during disk erasure operation: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+    except (OSError, IOError) as e:
+        error_msg = f"System error during disk erasure operation: {str(e)}"
         print(error_msg)
         log_error(error_msg)
 
@@ -530,34 +600,44 @@ def run_cli_mode(args):
                 print(f"\n{interrupt_msg}")
                 log_error(interrupt_msg)
                 continue
+            except (EOFError, IOError) as e:
+                input_error_msg = f"Input error in main menu: {str(e)}"
+                print(f"\n{input_error_msg}")
+                log_error(input_error_msg)
+                continue
                 
     except KeyboardInterrupt:
         final_interrupt_msg = "Program terminated by user (Ctrl+C)"
         print(f"\n{final_interrupt_msg}")
         log_error(final_interrupt_msg)
         sys.exit(130)
-    except IOError as e:
-        error_msg = f"I/O error: {str(e)}"
+    except (IOError, OSError) as e:
+        error_msg = f"System error: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         sys.exit(1)
-    except OSError as e:
-        error_msg = f"OS error: {str(e)}"
+    except (ValueError, TypeError) as e:
+        error_msg = f"Data validation error: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         sys.exit(1)
-    except ValueError as e:
-        error_msg = f"Value error: {str(e)}"
+    except (SubprocessError, CalledProcessError) as e:
+        error_msg = f"Command execution error: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         sys.exit(1)
-    except SubprocessError as e:
-        error_msg = f"Subprocess error: {str(e)}"
+    except (ImportError, ModuleNotFoundError) as e:
+        error_msg = f"Module import error: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         sys.exit(1)
-    except Exception as e:
-        error_msg = f"Unexpected error: {str(e)}"
+    except (AttributeError, NameError) as e:
+        error_msg = f"Configuration/reference error: {str(e)}"
+        print(error_msg)
+        log_error(error_msg)
+        sys.exit(1)
+    except (PermissionError, FileNotFoundError) as e:
+        error_msg = f"Access/file error: {str(e)}"
         print(error_msg)
         log_error(error_msg)
         sys.exit(1)

@@ -41,6 +41,12 @@ try:
 except PermissionError:
     print("Error: Permission denied. Please run the script with sudo.", file=sys.stderr)
     sys.exit(1)  # Exit the script to enforce sudo usage
+except FileNotFoundError:
+    print(f"Error: Log directory does not exist: {os.path.dirname(log_file)}", file=sys.stderr)
+    sys.exit(1)
+except OSError as e:
+    print(f"Error: Unable to create log handler: {e}", file=sys.stderr)
+    sys.exit(1)
 
 
 def log_info(message: str) -> None:
@@ -75,10 +81,21 @@ def session_start() -> None:
     
     separator = "=" * 80
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open(log_file, "a") as f:
-        f.write(f"\n{separator}\n")
-        f.write(f"SESSION START: {timestamp}\n")
-        f.write(f"{separator}\n")
+    
+    try:
+        with open(log_file, "a") as f:
+            f.write(f"\n{separator}\n")
+            f.write(f"SESSION START: {timestamp}\n")
+            f.write(f"{separator}\n")
+    except PermissionError:
+        log_error("Permission denied when writing session start to log file")
+        return
+    except OSError as e:
+        log_error(f"OS error when writing session start: {e}")
+        return
+    except IOError as e:
+        log_error(f"IO error when writing session start: {e}")
+        return
     
     # This will be captured in session logs too
     log_info(f"New session started at {timestamp}")
@@ -96,10 +113,17 @@ def session_end() -> None:
     # Stop capturing session logs
     _session_active = False
     
-    with open(log_file, "a") as f:
-        f.write(f"\n{separator}\n")
-        f.write(f"SESSION END: {timestamp}\n")
-        f.write(f"{separator}\n\n")
+    try:
+        with open(log_file, "a") as f:
+            f.write(f"\n{separator}\n")
+            f.write(f"SESSION END: {timestamp}\n")
+            f.write(f"{separator}\n\n")
+    except PermissionError:
+        log_error("Permission denied when writing session end to log file")
+    except OSError as e:
+        log_error(f"OS error when writing session end: {e}")
+    except IOError as e:
+        log_error(f"IO error when writing session end: {e}")
 
 def log_application_exit(exit_method: str = "Exit button") -> None:
     """Log application exit and end session properly."""
@@ -132,24 +156,35 @@ def generate_session_pdf() -> str:
         str: Path to the generated PDF file
     
     Raises:
-        Exception: If PDF generation fails
+        ValueError: If no session logs are available
+        PermissionError: If unable to write to output directory
+        OSError: If filesystem operations fail
     """
+    # Get current session logs
+    session_logs = get_current_session_logs()
+    
+    if not session_logs:
+        raise ValueError("No session logs available to generate PDF")
+    
+    # Create output directory if it doesn't exist
+    output_dir = "/tmp/disk_cloner_logs"
     try:
-        # Get current session logs
-        session_logs = get_current_session_logs()
-        
-        if not session_logs:
-            raise Exception("No session logs available to generate PDF")
-        
-        # Create output directory if it doesn't exist
-        output_dir = "/tmp/disk_cloner_logs"
         os.makedirs(output_dir, exist_ok=True)
-        
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        pdf_filename = f"disk_cloner_session_{timestamp}.pdf"
-        pdf_path = os.path.join(output_dir, pdf_filename)
-        
+    except PermissionError:
+        error_msg = f"Permission denied creating directory: {output_dir}"
+        log_error(error_msg)
+        raise PermissionError(error_msg)
+    except OSError as e:
+        error_msg = f"OS error creating directory {output_dir}: {str(e)}"
+        log_error(error_msg)
+        raise OSError(error_msg)
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pdf_filename = f"disk_cloner_session_{timestamp}.pdf"
+    pdf_path = os.path.join(output_dir, pdf_filename)
+    
+    try:
         # Create PDF using basic PDF structure
         _create_simple_pdf(
             pdf_path,
@@ -162,18 +197,18 @@ def generate_session_pdf() -> str:
         log_info(f"Session log PDF generated successfully: {pdf_path}")
         return pdf_path
         
-    except PermissionError as e:
-        error_msg = f"Permission denied writing PDF to {output_dir}: {str(e)}"
+    except PermissionError:
+        error_msg = f"Permission denied writing PDF to {pdf_path}"
         log_error(error_msg)
-        raise Exception(error_msg)
+        raise
     except OSError as e:
         error_msg = f"OS error during PDF generation: {str(e)}"
         log_error(error_msg)
-        raise Exception(error_msg)
-    except Exception as e:
-        error_msg = f"Unexpected error during session PDF generation: {str(e)}"
+        raise
+    except IOError as e:
+        error_msg = f"IO error during PDF generation: {str(e)}"
         log_error(error_msg)
-        raise Exception(error_msg)
+        raise IOError(error_msg)
 
 def generate_log_file_pdf() -> str:
     """
@@ -183,30 +218,61 @@ def generate_log_file_pdf() -> str:
         str: Path to the generated PDF file
     
     Raises:
-        Exception: If PDF generation fails
+        FileNotFoundError: If log file doesn't exist
+        PermissionError: If unable to read log file or write PDF
+        UnicodeDecodeError: If log file has encoding issues
+        OSError: If filesystem operations fail
     """
+    # Create output directory if it doesn't exist
+    output_dir = "/tmp/disk_cloner_logs"
     try:
-        # Create output directory if it doesn't exist
-        output_dir = "/tmp/disk_cloner_logs"
         os.makedirs(output_dir, exist_ok=True)
-        
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        pdf_filename = f"disk_cloner_complete_log_{timestamp}.pdf"
-        pdf_path = os.path.join(output_dir, pdf_filename)
-        
-        # Read log file
-        if not os.path.exists(log_file):
-            raise FileNotFoundError(f"Log file not found: {log_file}")
-        
+    except PermissionError:
+        error_msg = f"Permission denied creating directory: {output_dir}"
+        log_error(error_msg)
+        raise PermissionError(error_msg)
+    except OSError as e:
+        error_msg = f"OS error creating directory {output_dir}: {str(e)}"
+        log_error(error_msg)
+        raise OSError(error_msg)
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pdf_filename = f"disk_cloner_complete_log_{timestamp}.pdf"
+    pdf_path = os.path.join(output_dir, pdf_filename)
+    
+    # Read log file
+    if not os.path.exists(log_file):
+        error_msg = f"Log file not found: {log_file}"
+        log_error(error_msg)
+        raise FileNotFoundError(error_msg)
+    
+    try:
+        with open(log_file, 'r', encoding='utf-8') as f:
+            log_lines = [line.strip() for line in f.readlines() if line.strip()]
+    except UnicodeDecodeError:
+        # Try with different encoding if UTF-8 fails
         try:
-            with open(log_file, 'r', encoding='utf-8') as f:
-                log_lines = [line.strip() for line in f.readlines() if line.strip()]
-        except UnicodeDecodeError:
-            # Try with different encoding if UTF-8 fails
             with open(log_file, 'r', encoding='latin-1') as f:
                 log_lines = [line.strip() for line in f.readlines() if line.strip()]
-        
+        except UnicodeDecodeError as e:
+            error_msg = f"Unable to decode log file with UTF-8 or latin-1: {str(e)}"
+            log_error(error_msg)
+            raise UnicodeDecodeError(e.encoding, e.object, e.start, e.end, error_msg)
+    except PermissionError:
+        error_msg = f"Permission denied reading log file: {log_file}"
+        log_error(error_msg)
+        raise
+    except OSError as e:
+        error_msg = f"OS error reading log file: {str(e)}"
+        log_error(error_msg)
+        raise
+    except IOError as e:
+        error_msg = f"IO error reading log file: {str(e)}"
+        log_error(error_msg)
+        raise IOError(error_msg)
+    
+    try:
         # Create PDF using basic PDF structure
         _create_simple_pdf(
             pdf_path,
@@ -220,26 +286,18 @@ def generate_log_file_pdf() -> str:
         log_info(f"Complete log file PDF generated successfully: {pdf_path}")
         return pdf_path
         
-    except FileNotFoundError as e:
-        error_msg = f"Log file not found: {str(e)}"
+    except PermissionError:
+        error_msg = f"Permission denied writing PDF to {pdf_path}"
         log_error(error_msg)
-        raise Exception(error_msg)
-    except PermissionError as e:
-        error_msg = f"Permission denied: {str(e)}"
-        log_error(error_msg)
-        raise Exception(error_msg)
+        raise
     except OSError as e:
         error_msg = f"OS error during PDF generation: {str(e)}"
         log_error(error_msg)
-        raise Exception(error_msg)
-    except UnicodeDecodeError as e:
-        error_msg = f"Error reading log file - encoding issue: {str(e)}"
+        raise
+    except IOError as e:
+        error_msg = f"IO error during PDF generation: {str(e)}"
         log_error(error_msg)
-        raise Exception(error_msg)
-    except Exception as e:
-        error_msg = f"Unexpected error during complete log PDF generation: {str(e)}"
-        log_error(error_msg)
-        raise Exception(error_msg)
+        raise IOError(error_msg)
 
 def _create_simple_pdf(file_path: str, title: str, content_lines: List[str], *info_lines: str) -> None:
     """
@@ -251,15 +309,30 @@ def _create_simple_pdf(file_path: str, title: str, content_lines: List[str], *in
         title: Title of the document
         content_lines: List of content lines to include
         *info_lines: Additional info lines to include in header
+        
+    Raises:
+        PermissionError: If unable to write to file
+        OSError: If filesystem operations fail
+        ValueError: If invalid parameters provided
     """
+    if not file_path:
+        raise ValueError("File path cannot be empty")
+    if not title:
+        raise ValueError("Title cannot be empty")
+    if not isinstance(content_lines, list):
+        raise ValueError("Content lines must be a list")
+    
     try:
         with open(file_path, 'wb') as f:
             # PDF Header
             f.write(b'%PDF-1.4\n')
             
             # Prepare content and calculate pages needed
-            pages_content = _prepare_pdf_pages(title, content_lines, *info_lines)
-            num_pages = len(pages_content)
+            try:
+                pages_content = _prepare_pdf_pages(title, content_lines, *info_lines)
+                num_pages = len(pages_content)
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Error preparing PDF pages: {str(e)}")
             
             # Track object positions for xref table
             object_positions = {}
@@ -369,8 +442,14 @@ startxref
 '''.encode('utf-8')
             f.write(trailer)
             
-    except Exception as e:
-        raise Exception(f"Error creating PDF structure: {str(e)}")
+    except PermissionError:
+        raise PermissionError(f"Permission denied writing to file: {file_path}")
+    except OSError as e:
+        raise OSError(f"OS error writing PDF file: {str(e)}")
+    except IOError as e:
+        raise IOError(f"IO error writing PDF file: {str(e)}")
+    except UnicodeEncodeError as e:
+        raise ValueError(f"Unicode encoding error in PDF content: {str(e)}")
 
 def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -> List[str]:
     """
@@ -383,7 +462,16 @@ def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -
     
     Returns:
         List[str]: List of page contents (PDF content streams)
+        
+    Raises:
+        ValueError: If invalid parameters provided
+        TypeError: If parameters are wrong type
     """
+    if not isinstance(title, str):
+        raise TypeError("Title must be a string")
+    if not isinstance(content_lines, list):
+        raise TypeError("Content lines must be a list")
+    
     try:
         pages = []
         lines_per_page = 55  # Conservative lines that fit on a page
@@ -398,9 +486,14 @@ def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -
             wrapped_lines = ["No content available."]
         else:
             for content_line in content_lines:
-                wrapped_content = _wrap_log_line(content_line, display_line_number)
-                wrapped_lines.extend(wrapped_content)
-                display_line_number += 1
+                try:
+                    wrapped_content = _wrap_log_line(content_line, display_line_number)
+                    wrapped_lines.extend(wrapped_content)
+                    display_line_number += 1
+                except (TypeError, ValueError) as e:
+                    # Handle problematic lines gracefully
+                    wrapped_lines.append(f"{display_line_number:4d}: [Error processing line: {str(e)}]")
+                    display_line_number += 1
         
         # Split wrapped lines into pages
         processed_lines = 0
@@ -415,7 +508,14 @@ def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -
             lines_for_this_page = wrapped_lines[processed_lines:end_line]
             
             if lines_for_this_page:
-                pages.append(_create_page_content(title, lines_for_this_page, page_num, is_first_page, *info_lines))
+                try:
+                    page_content = _create_page_content(title, lines_for_this_page, page_num, is_first_page, *info_lines)
+                    pages.append(page_content)
+                except (ValueError, TypeError) as e:
+                    # Create a fallback page if content creation fails
+                    fallback_content = f"BT\n/F1 12 Tf\n50 400 Td\n(Error creating page {page_num}: {_escape_pdf_string(str(e))}) Tj\nET"
+                    pages.append(fallback_content)
+                
                 processed_lines = end_line
                 page_num += 1
                 
@@ -427,12 +527,19 @@ def _prepare_pdf_pages(title: str, content_lines: List[str], *info_lines: str) -
         
         # Ensure at least one page
         if not pages:
-            pages.append(_create_page_content(title, ["No content available."], 1, True, *info_lines))
+            try:
+                fallback_page = _create_page_content(title, ["No content available."], 1, True, *info_lines)
+                pages.append(fallback_page)
+            except (ValueError, TypeError):
+                # Ultimate fallback
+                pages.append("BT\n/F1 12 Tf\n50 400 Td\n(Error: Unable to create page content) Tj\nET")
         
         return pages
         
-    except Exception as e:
-        raise Exception(f"Error preparing PDF pages: {str(e)}")
+    except MemoryError:
+        raise ValueError("Content too large to process - out of memory")
+    except RecursionError:
+        raise ValueError("Content structure too complex - recursion limit exceeded")
 
 def _create_page_content(title: str, content_lines: List[str], page_number: int, is_first_page: bool, *info_lines: str) -> str:
     """
@@ -447,7 +554,20 @@ def _create_page_content(title: str, content_lines: List[str], page_number: int,
     
     Returns:
         str: PDF content stream for this page
+        
+    Raises:
+        ValueError: If invalid parameters provided
+        TypeError: If parameters are wrong type
     """
+    if not isinstance(title, str):
+        raise TypeError("Title must be a string")
+    if not isinstance(content_lines, list):
+        raise TypeError("Content lines must be a list")
+    if not isinstance(page_number, int) or page_number < 1:
+        raise ValueError("Page number must be a positive integer")
+    if not isinstance(is_first_page, bool):
+        raise TypeError("is_first_page must be a boolean")
+    
     try:
         lines = []
         
@@ -480,7 +600,12 @@ def _create_page_content(title: str, content_lines: List[str], page_number: int,
         # Add content lines
         for i, content_line in enumerate(content_lines):
             lines.append("0 -12 Td")  # Move down 12 points
-            lines.append(f"({_escape_pdf_string(content_line)}) Tj")
+            try:
+                escaped_line = _escape_pdf_string(content_line)
+                lines.append(f"({escaped_line}) Tj")
+            except (TypeError, ValueError):
+                # Handle problematic content gracefully
+                lines.append(f"([Line {i+1}: Error processing content]) Tj")
         
         # Add page number at bottom (move to absolute position)
         lines.append("50 30 Td")  # Move to bottom left (absolute position)
@@ -491,9 +616,9 @@ def _create_page_content(title: str, content_lines: List[str], page_number: int,
         
         return "\n".join(lines)
         
-    except Exception as e:
-        # Return a minimal valid content stream if there's an error
-        return f"BT\n/F1 12 Tf\n50 400 Td\n(Error creating page {page_number} content: {_escape_pdf_string(str(e))}) Tj\nET"
+    except MemoryError:
+        # Return a minimal error page if we run out of memory
+        return f"BT\n/F1 12 Tf\n50 400 Td\n(Error: Page {page_number} - Out of memory) Tj\nET"
 
 def _wrap_log_line(content_line: str, line_number: int, max_width: int = 75) -> List[str]:
     """
@@ -506,22 +631,44 @@ def _wrap_log_line(content_line: str, line_number: int, max_width: int = 75) -> 
     
     Returns:
         List[str]: List of wrapped lines with proper formatting
+        
+    Raises:
+        TypeError: If parameters are wrong type
+        ValueError: If parameters are invalid
     """
+    if not isinstance(content_line, str):
+        raise TypeError("Content line must be a string")
+    if not isinstance(line_number, int) or line_number < 1:
+        raise ValueError("Line number must be a positive integer")
+    if not isinstance(max_width, int) or max_width < 10:
+        raise ValueError("Max width must be an integer >= 10")
+    
     try:
         # Calculate available width after line number prefix
         line_prefix = f"{line_number:4d}: "
         continuation_prefix = "      "  # 6 spaces to align with content
         available_width = max_width - len(line_prefix)
         
-        # Use textwrap to break long lines at word boundaries
-        wrapped_content = textwrap.fill(
-            content_line,
-            width=available_width,
-            break_long_words=True,
-            break_on_hyphens=True,
-            expand_tabs=True,
-            replace_whitespace=False
-        )
+        if available_width < 10:
+            # Fallback for very narrow widths
+            return [f"{line_number:4d}: {content_line[:10]}..."]
+        
+        try:
+            # Use textwrap to break long lines at word boundaries
+            wrapped_content = textwrap.fill(
+                content_line,
+                width=available_width,
+                break_long_words=True,
+                break_on_hyphens=True,
+                expand_tabs=True,
+                replace_whitespace=False
+            )
+        except (TypeError, ValueError):
+            # Fallback to simple truncation if textwrap fails
+            if len(content_line) > available_width:
+                wrapped_content = content_line[:available_width-3] + "..."
+            else:
+                wrapped_content = content_line
         
         wrapped_lines = wrapped_content.split('\n')
         
@@ -537,12 +684,12 @@ def _wrap_log_line(content_line: str, line_number: int, max_width: int = 75) -> 
         
         return formatted_lines
         
-    except Exception as e:
-        # Fallback to simple truncation if wrapping fails
-        if len(content_line) > max_width - 6:
-            return [f"{line_number:4d}: {content_line[:max_width-9]}..."]
-        else:
-            return [f"{line_number:4d}: {content_line}"]
+    except MemoryError:
+        # Fallback for memory issues
+        return [f"{line_number:4d}: [Memory error processing line]"]
+    except RecursionError:
+        # Fallback for recursion issues
+        return [f"{line_number:4d}: [Recursion error processing line]"]
 
 def _escape_pdf_string(text: str) -> str:
     """
@@ -553,10 +700,18 @@ def _escape_pdf_string(text: str) -> str:
     
     Returns:
         str: Escaped text safe for PDF
+        
+    Raises:
+        TypeError: If text is not a string
     """
+    if text is None:
+        return ""
+    
     try:
-        # Replace special PDF string characters
+        # Convert to string if not already
         text = str(text)
+        
+        # Replace special PDF string characters
         text = text.replace('\\', '\\\\')  # Backslash must be first
         text = text.replace('(', '\\(')
         text = text.replace(')', '\\)')
@@ -567,12 +722,18 @@ def _escape_pdf_string(text: str) -> str:
         # Remove or replace non-printable characters
         cleaned_text = ""
         for char in text:
-            if ord(char) >= 32 and ord(char) <= 126:
-                cleaned_text += char
-            else:
-                cleaned_text += " "  # Replace with space
+            try:
+                char_ord = ord(char)
+                if 32 <= char_ord <= 126:
+                    cleaned_text += char
+                else:
+                    cleaned_text += " "  # Replace with space
+            except (TypeError, ValueError):
+                cleaned_text += " "  # Replace problematic characters with space
         
         return cleaned_text
         
-    except Exception as e:
-        return f"Error processing text: {str(e)}"
+    except (TypeError, ValueError, AttributeError):
+        return f"[Error processing text: {type(text).__name__}]"
+    except MemoryError:
+        return "[Memory error processing text]"
