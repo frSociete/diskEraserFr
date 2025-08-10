@@ -55,6 +55,7 @@ xfce4
 network-manager
 network-manager-gnome
 sudo
+evince
 live-boot
 live-config
 live-tools
