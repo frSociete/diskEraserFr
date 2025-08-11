@@ -105,7 +105,7 @@ sudo systemctl restart systemd-udevd
 ### Utilisation du Code Python 🐍
 
 ```bash
-git clone https://github.com/Bolo101/diskEraser.git
+git clone https://github.com/frSociete/diskEraserFr.git
 cd diskEraser/code/python
 sudo python3 main.py         # Mode GUI (par défaut)
 sudo python3 main.py --cli   # Mode ligne de commande
@@ -133,7 +133,7 @@ sudo diskeraser --cli     # Mode CLI
    cd diskEraser/iso && make
    ```
 
-   Ou téléchargez la version précompilée : [Disk Eraser ISO v5.2](https://archive.org/download/diskEraser-V5.2/activeDiskDeletionBlockedVersionFr/diskEraserFr-V5.2.iso)
+   Ou téléchargez la version précompilée en français : [Disk Eraser Fr ISO v5.3](https://archive.org/download/diskEraser-v5.3/diskEraserFr-v5.3.iso)
 
 
 2. **Flasher sur USB** :
