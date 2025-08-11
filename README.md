@@ -143,7 +143,7 @@ sudo diskeraser --cli     # CLI mode
    ```
    - Pre-built ISO
 
-   Download pre-built: [Disk Eraser ISO v5.3](https://archive.org/details/diskEraser-v5.3)
+   Download pre-built: [Disk Eraser ISO v5.3](https://archive.org/download/diskEraser-v5.3/diskEraser-v5.3.iso)
 
 2. **Flash to USB**:
    ```bash
