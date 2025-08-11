@@ -7,32 +7,32 @@ import time
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def format_disk(disk: str, fs_choice: str) -> None:
-    # Make sure we're working with just the device name without /dev/
+    # S'assurer qu'on travaille avec le nom du périphérique sans /dev/
     disk_name = disk.replace('/dev/', '')
     partition = f"/dev/{disk_name}1"
     
-    # Wait briefly for the partition to be recognized by the system
-    logging.info(f"Waiting for partition {partition} to be recognized...")
+    # Attendre brièvement que la partition soit reconnue par le système
+    logging.info(f"Attente de la reconnaissance de la partition {partition}...")
     time.sleep(2)
     
     try:
         if fs_choice == "ntfs":
-            logging.info(f"Formatting {partition} as NTFS...")
+            logging.info(f"Formatage de {partition} en NTFS...")
             run_command(["mkfs.ntfs", "-f", partition])
         elif fs_choice == "ext4":
-            logging.info(f"Formatting {partition} as EXT4...")
+            logging.info(f"Formatage de {partition} en EXT4...")
             run_command(["mkfs.ext4", "-F", partition])
         elif fs_choice == "vfat":
-            logging.info(f"Formatting {partition} as VFAT...")
+            logging.info(f"Formatage de {partition} en VFAT...")
             run_command(["mkfs.vfat", "-F", "32", partition])
         else:
-            logging.error(f"Unsupported filesystem: {fs_choice}")
+            logging.error(f"Système de fichiers non supporté : {fs_choice}")
             sys.exit(1)
 
-        logging.info(f"Partition {partition} formatted successfully.")
+        logging.info(f"Partition {partition} formatée avec succès.")
     except FileNotFoundError:
-        logging.error(f"Error: Filesystem utility not found for {fs_choice}. Ensure necessary tools are installed.")
+        logging.error(f"Erreur : Utilitaire de système de fichiers introuvable pour {fs_choice}. Assurez-vous que les outils nécessaires sont installés.")
         sys.exit(2)
     except CalledProcessError as e:
-        logging.error(f"Error: Failed to format {partition}: {e}")
+        logging.error(f"Erreur : Échec du formatage de {partition} : {e}")
         sys.exit(1)

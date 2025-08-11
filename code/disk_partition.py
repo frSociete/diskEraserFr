@@ -6,22 +6,22 @@ from subprocess import CalledProcessError
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def partition_disk(disk: str) -> None:
-    print(f"Partitioning disk {disk}...")
+    print(f"Partitionnement du disque {disk}...")
 
     try:
-        # Make sure we're working with just the device name without /dev/
+        # S'assurer qu'on travaille avec le nom du périphérique sans /dev/
         disk_name = disk.replace('/dev/', '')
         
-        # Create a new GPT partition table
+        # Créer une nouvelle table de partitions GPT
         run_command(["parted", f"/dev/{disk_name}", "--script", "mklabel", "gpt"])
         
-        # Create a primary partition using 100% of disk space
+        # Créer une partition primaire utilisant 100% de l'espace disque
         run_command(["parted", f"/dev/{disk_name}", "--script", "mkpart", "primary", "0%", "100%"])
         
-        print(f"Disk {disk_name} partitioned successfully.")
+        print(f"Disque {disk_name} partitionné avec succès.")
     except FileNotFoundError:
-        logging.error(f"Error: `parted` command not found. Ensure it is installed.")
+        logging.error(f"Erreur : Commande `parted` introuvable. Assurez-vous qu'elle est installée.")
         sys.exit(2)
     except CalledProcessError as e:
-        logging.error(f"Error: Failed to partition {disk}: {e}")
+        logging.error(f"Erreur : Échec du partitionnement de {disk} : {e}")
         sys.exit(1)

@@ -8,10 +8,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 def get_disk_serial(device: str) -> str:
     """
-    Get a stable disk identifier using udevadm to extract WWN or serial number from an unmounted device.
+    Obtenir un identifiant stable du disque en utilisant udevadm pour extraire 
+    le WWN ou le numéro de série d'un périphérique non monté.
     """
     try:
-        # Try getting the WWN (World Wide Name) directly from udevadm
+        # Essayer d'obtenir le WWN (World Wide Name) directement depuis udevadm
         output = subprocess.run(
             ["udevadm", "info", "--query=property", f"--name=/dev/{device}"],
             check=True,
@@ -19,30 +20,30 @@ def get_disk_serial(device: str) -> str:
             stderr=subprocess.PIPE
         ).stdout.decode()
 
-        # Look for WWN in the udevadm output
+        # Rechercher le WWN dans la sortie d'udevadm
         wwn_match = re.search(r'ID_WWN=(\S+)', output)
         if wwn_match:
             return wwn_match.group(1)
 
-        # If WWN not found, fall back to the serial number
+        # Si le WWN n'est pas trouvé, utiliser le numéro de série en fallback
         serial_match = re.search(r'ID_SERIAL_SHORT=(\S+)', output)
         if serial_match:
             return serial_match.group(1)
         
-        # Get the model as a fallback if serial is not available
+        # Obtenir le modèle comme fallback si le numéro de série n'est pas disponible
         model_match = re.search(r'ID_MODEL=(\S+)', output)
         if model_match:
             return f"{model_match.group(1)}_{device}"
             
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        logging.error(f"Error occurred while querying {device}: {e}")
+        logging.error(f"Erreur lors de la requête sur {device} : {e}")
     except KeyboardInterrupt:
-        logging.error("Disk identification interrupted by user (Ctrl+C)")
-        print("\nDisk identification interrupted by user (Ctrl+C)")
+        logging.error("Identification du disque interrompue par l'utilisateur (Ctrl+C)")
+        print("\nIdentification du disque interrompue par l'utilisateur (Ctrl+C)")
         sys.exit(130)
 
-    # If all else fails, return a default identifier
-    return f"UNKNOWN_{device}"
+    # Si tout échoue, retourner un identifiant par défaut
+    return f"INCONNU_{device}"
 
 def is_ssd(device: str) -> bool:
     try:
@@ -54,33 +55,33 @@ def is_ssd(device: str) -> bool:
         )
         return output.stdout.decode().strip() == "0"
     except (FileNotFoundError, subprocess.SubprocessError) as e:
-        logging.warning(f"SSD check failed for {device}: {e}")
-        # Don't exit, just return False as fallback
+        logging.warning(f"Vérification SSD échouée pour {device} : {e}")
+        # Ne pas quitter, juste retourner False par défaut
         return False
     except KeyboardInterrupt:
-        logging.error("SSD check interrupted by user (Ctrl+C)")
-        print("\nSSD check interrupted by user (Ctrl+C)")
+        logging.error("Vérification SSD interrompue par l'utilisateur (Ctrl+C)")
+        print("\nVérification SSD interrompue par l'utilisateur (Ctrl+C)")
         sys.exit(130)
 
 def erase_disk_hdd(device: str, passes: int, log_func=None) -> str:
     try:
-        # Type-casting arguments to ensure correct types
+        # Conversion de type pour s'assurer des types corrects
         device = str(device)
         passes = int(passes)
 
-        # Get stable disk identifier before erasure
+        # Obtenir l'identifiant stable du disque avant l'effacement
         disk_serial = get_disk_serial(device)
 
         if is_ssd(device):
-            logging.warning(f"Warning: {device} appears to be an SSD. Multiple passes may not be effective.")
-            # Continue with erasure instead of returning
+            logging.warning(f"Attention : {device} semble être un SSD. Plusieurs passes peuvent ne pas être efficaces.")
+            # Continuer avec l'effacement au lieu de retourner
 
-        logging.info(f"Erasing {device} using shred with {passes} passes...")
-        # Also log to GUI if log_func is provided
+        logging.info(f"Effacement de {device} en utilisant shred avec {passes} passes...")
+        # Enregistrer aussi dans l'interface graphique si log_func est fourni
         if log_func:
-            log_func(f"Erasing {device} using shred with {passes} passes...")
+            log_func(f"Effacement de {device} en utilisant shred avec {passes} passes...")
         
-        # Create a subprocess with stdout piped to capture shred output
+        # Créer un sous-processus avec stdout redirigé pour capturer la sortie de shred
         shred_process = subprocess.Popen(
             ["shred", "-n", f"{passes}", "-v", f"/dev/{device}"], 
             stdout=subprocess.PIPE, 
@@ -88,60 +89,60 @@ def erase_disk_hdd(device: str, passes: int, log_func=None) -> str:
             universal_newlines=True
         )
 
-        # Read output in real-time
+        # Lire la sortie en temps réel
         while True:
             try:
                 output = shred_process.stdout.readline()
                 if output == '' and shred_process.poll() is not None:
                     break
                 if output:
-                    # If a log function is provided (like in GUI), use it
-                    # Otherwise, print to stdout
+                    # Si une fonction de log est fournie (comme dans l'interface graphique), l'utiliser
+                    # Sinon, afficher sur stdout
                     if log_func:
                         log_func(output.strip())
                     else:
                         print(output.strip())
             except KeyboardInterrupt:
-                # Terminate the shred process if user interrupts
+                # Terminer le processus shred si l'utilisateur interrompt
                 shred_process.terminate()
-                logging.error("Disk erasure interrupted by user (Ctrl+C)")
-                print("\nDisk erasure interrupted by user (Ctrl+C)")
+                logging.error("Effacement du disque interrompu par l'utilisateur (Ctrl+C)")
+                print("\nEffacement du disque interrompu par l'utilisateur (Ctrl+C)")
                 sys.exit(130)
 
-        # Check return code
+        # Vérifier le code de retour
         if shred_process.returncode != 0:
             raise subprocess.CalledProcessError(shred_process.returncode, "shred")
 
-        # Log partition table wiping to both log file and GUI
-        wipe_message = f"Wiping partition table of {device} using dd..."
+        # Enregistrer l'effacement de la table de partitions dans le fichier de log et l'interface graphique
+        wipe_message = f"Effacement de la table de partitions de {device} avec dd..."
         logging.info(wipe_message)
         if log_func:
             log_func(wipe_message)
             
-        # Run dd command
+        # Exécuter la commande dd
         subprocess.run(["dd", "if=/dev/zero", f"of=/dev/{device}", "bs=1M", "count=10"], check=True)
 
-        # Log success message to both log file and GUI
-        success_message = f"Disk {device} successfully erased."
+        # Enregistrer le message de succès dans le fichier de log et l'interface graphique
+        success_message = f"Disque {device} effacé avec succès."
         logging.info(success_message)
         if log_func:
             log_func(success_message)
             
         return disk_serial
     except FileNotFoundError:
-        error_message = "Error: Required command not found."
+        error_message = "Erreur : Commande requise introuvable."
         logging.error(error_message)
         if log_func:
             log_func(error_message)
         sys.exit(2)
     except subprocess.CalledProcessError as e:
-        error_message = f"Error: Failed to erase {device}: {e}"
+        error_message = f"Erreur : Échec de l'effacement de {device} : {e}"
         logging.error(error_message)
         if log_func:
             log_func(error_message)
         sys.exit(1)
     except KeyboardInterrupt:
-        error_message = "Disk erasure interrupted by user (Ctrl+C)"
+        error_message = "Effacement du disque interrompu par l'utilisateur (Ctrl+C)"
         logging.error(error_message)
         if log_func:
             log_func(error_message)
@@ -150,37 +151,38 @@ def erase_disk_hdd(device: str, passes: int, log_func=None) -> str:
 
 def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None) -> bool:
     """
-    Securely erase a disk using cryptographic erasure: encrypt the entire drive
-    with a random key, then discard the key making data unrecoverable.
+    Effacer de manière sécurisée un disque en utilisant l'effacement cryptographique :
+    chiffrer tout le disque avec une clé aléatoire, puis supprimer la clé rendant
+    les données irrécupérables.
     
     Args:
-        device (str): Device name (without /dev/ prefix, e.g. 'sda')
-        filling_method (str): Fill method - "random" or "zero"
-        log_func (callable, optional): Function for logging output in real-time (e.g., for GUI)
+        device (str): Nom du périphérique (sans préfixe /dev/, ex: 'sda')
+        filling_method (str): Méthode de remplissage - "random" ou "zero"
+        log_func (callable, optional): Fonction pour enregistrer la sortie en temps réel (ex: pour interface graphique)
         
     Returns:
-        str: Disk serial number or identifier
+        str: Numéro de série du disque ou identifiant
         
     Raises:
-        Various exceptions if the erasure process fails
+        Diverses exceptions si le processus d'effacement échoue
     """
     try:
-        # Get stable disk identifier before erasure
+        # Obtenir l'identifiant stable du disque avant l'effacement
         disk_serial = get_disk_serial(device)
         
-        # Log start message
-        start_message = f"Starting cryptographic erasure of {device}..."
+        # Enregistrer le message de début
+        start_message = f"Démarrage de l'effacement cryptographique de {device}..."
         logging.info(start_message)
         if log_func:
             log_func(start_message)
         
-        # Step 1: Create a random encryption key and store temporarily
-        key_creation_msg = "Generating random encryption key..."
+        # Étape 1 : Créer une clé de chiffrement aléatoire et la stocker temporairement
+        key_creation_msg = "Génération d'une clé de chiffrement aléatoire..."
         logging.info(key_creation_msg)
         if log_func:
             log_func(key_creation_msg)
             
-        # Create a temporary keyfile with random data
+        # Créer un fichier clé temporaire avec des données aléatoires
         subprocess.run(
             ["dd", "if=/dev/urandom", "of=/tmp/temp_keyfile", "bs=512", "count=8"],
             check=True,
@@ -188,13 +190,13 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             stderr=subprocess.PIPE
         )
         
-        # Step 2: Use cryptsetup to encrypt the entire drive with LUKS
-        encrypt_msg = f"Encrypting {device} with LUKS using random key..."
+        # Étape 2 : Utiliser cryptsetup pour chiffrer tout le disque avec LUKS
+        encrypt_msg = f"Chiffrement de {device} avec LUKS en utilisant une clé aléatoire..."
         logging.info(encrypt_msg)
         if log_func:
             log_func(encrypt_msg)
             
-        # Create LUKS container (this will destroy all data on the device)
+        # Créer un conteneur LUKS (cela détruira toutes les données sur le périphérique)
         cryptsetup_process = subprocess.Popen(
             ["cryptsetup", "-q", "--batch-mode", "luksFormat", 
              f"/dev/{device}", "/tmp/temp_keyfile"],
@@ -203,7 +205,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             universal_newlines=True
         )
         
-        # Read output in real-time
+        # Lire la sortie en temps réel
         while True:
             try:
                 output = cryptsetup_process.stdout.readline()
@@ -216,21 +218,21 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                         print(output.strip())
             except KeyboardInterrupt:
                 cryptsetup_process.terminate()
-                logging.error("Encryption interrupted by user (Ctrl+C)")
-                print("\nEncryption interrupted by user (Ctrl+C)")
+                logging.error("Chiffrement interrompu par l'utilisateur (Ctrl+C)")
+                print("\nChiffrement interrompu par l'utilisateur (Ctrl+C)")
                 sys.exit(130)
         
-        # Check return code
+        # Vérifier le code de retour
         if cryptsetup_process.returncode != 0:
             raise subprocess.CalledProcessError(cryptsetup_process.returncode, "cryptsetup")
         
-        # Step 3: Fill the encrypted volume with zeroes or random data for added security
-        fill_msg = "Opening encrypted device to fill with data..."
+        # Étape 3 : Remplir le volume chiffré avec des zéros ou des données aléatoires pour plus de sécurité
+        fill_msg = "Ouverture du périphérique chiffré pour le remplir avec des données..."
         logging.info(fill_msg)
         if log_func:
             log_func(fill_msg)
             
-        # Open the encrypted device
+        # Ouvrir le périphérique chiffré
         subprocess.run(
             ["cryptsetup", "open", "--key-file", "/tmp/temp_keyfile", 
              f"/dev/{device}", f"temp_{device}"],
@@ -239,9 +241,9 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             stderr=subprocess.PIPE
         )
         
-        # FIXED: Properly handle the filling method selection
+        # CORRIGÉ : Gérer correctement la sélection de la méthode de remplissage
         if filling_method == "random":
-            fill_data_msg = "Filling encrypted device with random data (this may take a while)..."
+            fill_data_msg = "Remplissage du périphérique chiffré avec des données aléatoires (cela peut prendre du temps)..."
             logging.info(fill_data_msg)
             if log_func:
                 log_func(fill_data_msg)
@@ -253,8 +255,8 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 stderr=subprocess.STDOUT,
                 universal_newlines=True
             )
-        else:  # "zero" filling method
-            fill_data_msg = "Filling encrypted device with zeros (this may take a while)..."
+        else:  # méthode de remplissage "zero"
+            fill_data_msg = "Remplissage du périphérique chiffré avec des zéros (cela peut prendre du temps)..."
             logging.info(fill_data_msg)
             if log_func:
                 log_func(fill_data_msg)
@@ -267,7 +269,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 universal_newlines=True
             )
             
-        # Read output in real-time to show progress
+        # Lire la sortie en temps réel pour afficher la progression
         while True:
             try:
                 output = fill_process.stdout.readline()
@@ -280,15 +282,15 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                         print(output.strip())
             except KeyboardInterrupt:
                 fill_process.terminate()
-                logging.error("Fill operation interrupted by user (Ctrl+C)")
-                print("\nFill operation interrupted by user (Ctrl+C)")
-                # Make sure to close the mapper device before exiting
+                logging.error("Opération de remplissage interrompue par l'utilisateur (Ctrl+C)")
+                print("\nOpération de remplissage interrompue par l'utilisateur (Ctrl+C)")
+                # S'assurer de fermer le périphérique mapper avant de quitter
                 subprocess.run(["cryptsetup", "close", f"temp_{device}"], 
                                check=False)
                 sys.exit(130)
         
-        # Step 4: Close the encrypted device
-        close_msg = "Closing encrypted device..."
+        # Étape 4 : Fermer le périphérique chiffré
+        close_msg = "Fermeture du périphérique chiffré..."
         logging.info(close_msg)
         if log_func:
             log_func(close_msg)
@@ -300,8 +302,8 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             stderr=subprocess.PIPE
         )
         
-        # Step 5: Securely delete the key file
-        key_delete_msg = "Securely erasing the encryption key..."
+        # Étape 5 : Supprimer de manière sécurisée le fichier clé
+        key_delete_msg = "Effacement sécurisé de la clé de chiffrement..."
         logging.info(key_delete_msg)
         if log_func:
             log_func(key_delete_msg)
@@ -313,8 +315,8 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             stderr=subprocess.PIPE
         )
         
-        # Step 6: Optionally, overwrite the LUKS header to prevent any chance of recovery
-        header_msg = "Overwriting LUKS header to prevent any possibility of key recovery..."
+        # Étape 6 : Optionnellement, écraser l'en-tête LUKS pour empêcher toute chance de récupération
+        header_msg = "Écrasement de l'en-tête LUKS pour empêcher toute possibilité de récupération de clé..."
         logging.info(header_msg)
         if log_func:
             log_func(header_msg)
@@ -326,9 +328,9 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             stderr=subprocess.PIPE
         )
         
-        # Log success message with correct fill method
-        fill_method_str = "random data" if filling_method == "random" else "zero data"
-        success_message = f"Disk {device} successfully erased using cryptographic method with {fill_method_str} filling."
+        # Enregistrer le message de succès avec la méthode de remplissage correcte
+        fill_method_str = "données aléatoires" if filling_method == "random" else "données zéro"
+        success_message = f"Disque {device} effacé avec succès en utilisant la méthode cryptographique avec remplissage de {fill_method_str}."
         logging.info(success_message)
         if log_func:
             log_func(success_message)
@@ -336,28 +338,28 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
         return disk_serial
         
     except FileNotFoundError as e:
-        error_message = f"Error: Required command not found: {e}"
+        error_message = f"Erreur : Commande requise introuvable : {e}"
         logging.error(error_message)
         if log_func:
             log_func(error_message)
         sys.exit(2)
     except subprocess.CalledProcessError as e:
-        error_message = f"Error: Failed to cryptographically erase {device}: {e}"
+        error_message = f"Erreur : Échec de l'effacement cryptographique de {device} : {e}"
         logging.error(error_message)
         if log_func:
             log_func(error_message)
         sys.exit(1)
     except KeyboardInterrupt:
-        error_message = "Cryptographic erasure interrupted by user (Ctrl+C)"
+        error_message = "Effacement cryptographique interrompu par l'utilisateur (Ctrl+C)"
         logging.error(error_message)
         if log_func:
             log_func(error_message)
         print(f"\n{error_message}")
         sys.exit(130)
     finally:
-        # Cleanup in case of any errors
+        # Nettoyage en cas d'erreurs
         try:
-            # Check if the mapper device exists and close it if it does
+            # Vérifier si le périphérique mapper existe et le fermer s'il existe
             result = subprocess.run(
                 ["dmsetup", "info", f"temp_{device}"],
                 stdout=subprocess.PIPE,
@@ -366,14 +368,14 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             if result.returncode == 0:
                 subprocess.run(["cryptsetup", "close", f"temp_{device}"], check=False)
                 
-            # Remove the key file if it still exists
+            # Supprimer le fichier clé s'il existe encore
             if Path("/tmp/temp_keyfile").exists():
                 subprocess.run(["shred", "-u", "-z", "-n", "3", "/tmp/temp_keyfile"], check=False)
         except subprocess.SubprocessError as e:
-            logging.error(f"Subprocess error during cleanup: {e}")
+            logging.error(f"Erreur de sous-processus lors du nettoyage : {e}")
         except FileNotFoundError as e:
-            logging.error(f"Required command not found during cleanup: {e}")
+            logging.error(f"Commande requise introuvable lors du nettoyage : {e}")
         except PermissionError as e:
-            logging.error(f"Permission error during cleanup: {e}")
+            logging.error(f"Erreur de permission lors du nettoyage : {e}")
         except OSError as e:
-            logging.error(f"OS error during cleanup: {e}")
+            logging.error(f"Erreur OS lors du nettoyage : {e}")

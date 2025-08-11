@@ -18,16 +18,16 @@ def print_disk_details(disk):
         is_disk_ssd = is_ssd(disk)
         active_disks = get_active_disk()
         
-        # Récupérer les informations du disque depuis la fonction get_disk_list incluant l'étiquette
+        # Obtenir les informations du disque depuis get_disk_list incluant le label
         disk_size = "Inconnu"
         disk_model = "Inconnu"
-        disk_label = "Sans étiquette"
+        disk_label = "Pas d'étiquette"
         available_disks = get_disk_list()
         for available_disk in available_disks:
             if available_disk["device"] == f"/dev/{disk}":
                 disk_size = available_disk["size"]
                 disk_model = available_disk.get("model", "Inconnu")
-                disk_label = available_disk.get("label", "Sans étiquette")
+                disk_label = available_disk.get("label", "Pas d'étiquette")
                 break
         
         is_active = False
@@ -41,23 +41,23 @@ def print_disk_details(disk):
                     break
         
         print(f"Disque : /dev/{disk}")
-        print(f"  Série/ID : {disk_id}")
+        print(f"  Numéro de série/ID : {disk_id}")
         print(f"  Taille : {disk_size}")
         print(f"  Modèle : {disk_model}")
         print(f"  Étiquette : {disk_label}")
-        print(f"  Type : {'SSD' if is_disk_ssd else 'Mécanique'}")
-        print(f"  Statut : {'DISQUE SYSTÈME ACTIF - DANGER!' if is_active else 'Sûr à effacer'}")
+        print(f"  Type : {'État_solide' if is_disk_ssd else 'Mécanique'}")
+        print(f"  Statut : {'DISQUE SYSTÈME ACTIF - DANGER !' if is_active else 'Sûr à effacer'}")
         
         if is_disk_ssd:
-            print("  AVERTISSEMENT : Ceci est un disque SSD. L'effacement sécurisé multi-passes :")
+            print("  ATTENTION : Ceci est un périphérique SSD. L'effacement sécurisé multi-passes :")
             print("    • Peut endommager le SSD en causant une usure excessive")
-            print("    • Peut ne pas effacer toutes les données de manière sécurisée à cause du nivellement d'usure")
-            print("    • Peut ne pas réécrire tous les secteurs à cause du surprovisionnement")
+            print("    • Peut ne pas effacer toutes les données de manière sécurisée à cause du nivellement d'usure SSD")
+            print("    • Peut ne pas réécrire tous les secteurs à cause du sur-provisionnement")
             print("    • Pour les SSD, l'effacement cryptographique est recommandé")
         
         if is_active:
             print("  DANGER : Ceci est le DISQUE SYSTÈME ACTIF ! L'effacer rendra votre système inutilisable.")
-            print("          Le système plantera si vous continuez avec l'effacement de ce disque.")
+            print("          Le système plantera si vous procédez à l'effacement de ce disque.")
             
         return disk_id, is_disk_ssd, is_active
     except (SubprocessError, FileNotFoundError) as e:
@@ -85,11 +85,11 @@ def select_disks() -> list[str]:
         available_disks = get_disk_list()
         disk_names = [disk["device"].replace("/dev/", "") for disk in available_disks]
 
-        # Afficher d'abord le tableau de synthèse
+        # Afficher d'abord le tableau récapitulatif
         print("\n" + "=" * 80)
-        print("                          RÉSUMÉ DES DISQUES DISPONIBLES")
+        print("                        RÉSUMÉ DES DISQUES DISPONIBLES")
         print("=" * 80)
-        print(f"{'Périphérique':<12} {'Taille':<8} {'Modèle':<20} {'Étiquette':<15} {'Type':<12} {'Statut'}")
+        print(f"{'Périph.':<12} {'Taille':<8} {'Modèle':<20} {'Étiquette':<15} {'Type':<12} {'Statut'}")
         print("-" * 80)
         
         for disk in disk_names:
@@ -98,15 +98,15 @@ def select_disks() -> list[str]:
                 is_disk_ssd = is_ssd(disk)
                 active_disks = get_active_disk()
                 
-                # Récupérer les informations du disque incluant l'étiquette
+                # Obtenir les informations du disque incluant l'étiquette
                 disk_size = "Inconnu"
                 disk_model = "Inconnu"
-                disk_label = "Sans étiquette"
+                disk_label = "Pas d'étiquette"
                 for available_disk in available_disks:
                     if available_disk["device"] == f"/dev/{disk}":
                         disk_size = available_disk["size"]
                         disk_model = available_disk.get("model", "Inconnu")
-                        disk_label = available_disk.get("label", "Sans étiquette")
+                        disk_label = available_disk.get("label", "Pas d'étiquette")
                         break
                 
                 is_active = False
@@ -123,7 +123,7 @@ def select_disks() -> list[str]:
                 label_display = (disk_label[:13] + "..") if len(disk_label) > 15 else disk_label
                 
                 disk_type = "SSD" if is_disk_ssd else "HDD"
-                status = "ACTIF!" if is_active else "Sûr"
+                status = "ACTIF !" if is_active else "Sûr"
                 
                 print(f"{disk:<12} {disk_size:<8} {model_display:<20} {label_display:<15} {disk_type:<12} {status}")
                 
@@ -138,7 +138,7 @@ def select_disks() -> list[str]:
 
         # Puis itérer sur disk_names pour la vue détaillée
         print("\n" + "=" * 60)
-        print("                    INFORMATIONS DÉTAILLÉES DES DISQUES")
+        print("                  INFORMATIONS DÉTAILLÉES DES DISQUES")
         print("=" * 60)
         
         for disk in disk_names:
@@ -146,11 +146,11 @@ def select_disks() -> list[str]:
             print_disk_details(disk)
             
         print("\n" + "-" * 50)
-        print("\nAVERTISSEMENT : Cet outil va COMPLÈTEMENT EFFACER les disques sélectionnés. TOUTES LES DONNÉES SERONT PERDUES !")
-        print("AVERTISSEMENT : Si certains de ces disques sont des SSD, utiliser plusieurs passes peut endommager le SSD.")
+        print("\nATTENTION : Cet outil va COMPLÈTEMENT EFFACER les disques sélectionnés. TOUTES LES DONNÉES SERONT PERDUES !")
+        print("ATTENTION : Si certains de ces disques sont des SSD, utiliser plusieurs passes peut endommager le SSD.")
         print("Pour les SSD, l'effacement cryptographique est recommandé.\n")
         
-        selected_disks = input("Entrez les disques à effacer (séparés par des virgules, ex : sda,sdb) : ").strip()
+        selected_disks = input("Entrez les disques à effacer (séparés par des virgules, ex: sda,sdb) : ").strip()
         disk_names = [disk.strip() for disk in selected_disks.split(",") if disk.strip()]
         
         valid_disks = []
@@ -173,15 +173,15 @@ def select_disks() -> list[str]:
         log_error(f"Erreur système lors de la sélection de disque : {str(e)}")
         return []
     except (AttributeError, TypeError) as e:
-        log_error(f"Erreur de traitement des données lors de la sélection de disque : {str(e)}")
+        log_error(f"Erreur de traitement de données lors de la sélection de disque : {str(e)}")
         return []
 
 def get_erasure_method():
-    """Obtient le choix de la méthode d'effacement de l'utilisateur"""
+    """Obtient le choix de méthode d'effacement de l'utilisateur"""
     while True:
         try:
             print("\n" + "=" * 50)
-            print("            SÉLECTION DE LA MÉTHODE D'EFFACEMENT")
+            print("           SÉLECTION DE LA MÉTHODE D'EFFACEMENT")
             print("=" * 50)
             print("1. Réécriture standard (passages multiples)")
             print("2. Effacement cryptographique (recommandé pour les SSD)")
@@ -190,12 +190,12 @@ def get_erasure_method():
             choice = input("Sélectionnez la méthode d'effacement (1-2) : ").strip()
             
             if choice == "1":
-                return False, "random"  # use_crypto=False, crypto_fill n'a pas d'importance
+                return False, "random"  # use_crypto=False, crypto_fill n'importe pas
             elif choice == "2":
                 # Obtenir la méthode de remplissage crypto
                 while True:
                     print("\n" + "=" * 40)
-                    print("     MÉTHODE DE REMPLISSAGE CRYPTOGRAPHIQUE")
+                    print("    MÉTHODE DE REMPLISSAGE CRYPTOGRAPHIQUE")
                     print("=" * 40)
                     print("1. Données aléatoires (recommandé)")
                     print("2. Données zéro")
@@ -216,7 +216,7 @@ def get_erasure_method():
             print("\nOpération annulée.")
             sys.exit(130)
         except (EOFError, IOError) as e:
-            print(f"\nErreur d'entrée : {str(e)}")
+            print(f"\nErreur de saisie : {str(e)}")
             print("Opération annulée.")
             sys.exit(1)
 
@@ -224,16 +224,16 @@ def get_passes():
     """Obtient le nombre de passes pour la méthode de réécriture"""
     while True:
         try:
-            passes_input = input("Entrez le nombre de passes pour la réécriture (défaut : 3) : ").strip()
+            passes_input = input("Entrez le nombre de passes pour la réécriture (par défaut : 3) : ").strip()
             if not passes_input:
                 return 3
             
             passes = int(passes_input)
             if passes < 1:
-                print("Le nombre de passes doit être au moins 1.")
+                print("Le nombre de passes doit être d'au moins 1.")
                 continue
             elif passes > 20:
-                print("Avertissement : Plus de 20 passes peut prendre beaucoup de temps.")
+                print("Attention : Plus de 20 passes peut prendre un temps très long.")
                 confirm = input("Continuer ? (o/n) : ").strip().lower()
                 if confirm not in ['o', 'oui']:
                     continue
@@ -241,12 +241,12 @@ def get_passes():
             return passes
             
         except ValueError:
-            print("Entrée invalide. Veuillez entrer un nombre valide.")
+            print("Saisie invalide. Veuillez entrer un nombre valide.")
         except KeyboardInterrupt:
             print("\nOpération annulée.")
             sys.exit(130)
         except (EOFError, IOError) as e:
-            print(f"\nErreur d'entrée : {str(e)}")
+            print(f"\nErreur de saisie : {str(e)}")
             print("Opération annulée.")
             sys.exit(1)
 
@@ -261,12 +261,12 @@ def confirm_erasure(disk: str, fs_choice: str, method_description: str) -> bool:
             print("-" * 50)
             
             if is_disk_ssd and "réécriture" in method_description.lower():
-                print("\nAVERTISSEMENT : Ce disque est un SSD. La réécriture multi-passes peut ne pas être efficace.")
-                print("         Considérez utiliser l'effacement cryptographique à la place.")
+                print("\nATTENTION : Ce disque est un SSD. La réécriture multi-passes peut ne pas être efficace.")
+                print("         Considérez plutôt utiliser l'effacement cryptographique.")
                 
             if is_active:
                 print("\nDANGER : Ceci est le DISQUE SYSTÈME ACTIF ! L'effacer rendra votre système inutilisable.")
-                print("        Le système va PLANTER si vous continuez avec l'effacement de ce disque.")
+                print("        Le système va PLANTER si vous procédez à l'effacement de ce disque.")
                 
             print(f"\nVous êtes sur le point d'EFFACER DÉFINITIVEMENT le disque {disk_id} (/dev/{disk}).")
             print(f"Système de fichiers : {fs_choice}")
@@ -275,19 +275,19 @@ def confirm_erasure(disk: str, fs_choice: str, method_description: str) -> bool:
             
             confirmation = input(f"Êtes-vous sûr de vouloir effacer le disque {disk_id} ? (oui/non) : ").strip().lower()
             if confirmation == "oui":
-                # Pour les disques système actifs, exiger une seconde confirmation
+                # Pour les disques système actifs, demander une seconde confirmation
                 if is_active:
-                    second_confirm = input("DERNIER AVERTISSEMENT : Vous êtes sur le point d'effacer le DISQUE SYSTÈME ACTIF. Tapez 'DÉTRUIRE' pour confirmer : ").strip()
-                    return second_confirm == "DÉTRUIRE"
+                    second_confirm = input("AVERTISSEMENT FINAL : Vous êtes sur le point d'effacer le DISQUE SYSTÈME ACTIF. Tapez 'DETRUIRE' pour confirmer : ").strip()
+                    return second_confirm == "DETRUIRE"
                 return True
             elif confirmation == "non":
                 return False
-            print("Entrée invalide. Entrez 'oui' ou 'non'.")
+            print("Saisie invalide. Entrez 'oui' ou 'non'.")
         except KeyboardInterrupt:
             log_error("Confirmation d'effacement interrompue par l'utilisateur (Ctrl+C)")
             sys.exit(130)
         except (EOFError, IOError) as e:
-            log_error(f"Erreur d'entrée lors de la confirmation d'effacement : {str(e)}")
+            log_error(f"Erreur de saisie lors de la confirmation d'effacement : {str(e)}")
             return False
 
 def get_disk_confirmations(disks: list[str], fs_choice: str, passes: int, use_crypto: bool, crypto_fill: str) -> list[str]:
@@ -296,7 +296,7 @@ def get_disk_confirmations(disks: list[str], fs_choice: str, passes: int, use_cr
         fill_method = "zéros" if crypto_fill == "zero" else "données aléatoires"
         method_description = f"effacement cryptographique (remplissage avec {fill_method})"
     else:
-        method_description = f"réécriture standard en {passes} passes"
+        method_description = f"réécriture standard {passes}-passes"
     
     return [disk for disk in disks if confirm_erasure(disk, fs_choice, method_description)]
 
@@ -305,7 +305,7 @@ def print_log_menu() -> None:
     while True:
         try:
             print("\n" + "=" * 50)
-            print("            OPTIONS D'IMPRESSION DES JOURNAUX")
+            print("           OPTIONS D'IMPRESSION DES JOURNAUX")
             print("=" * 50)
             print("1. Imprimer le journal de session (session actuelle uniquement)")
             print("2. Imprimer le fichier journal complet (tous les journaux historiques)")
@@ -321,7 +321,7 @@ def print_log_menu() -> None:
             elif choice == "3":
                 break
             else:
-                print("Choix invalide. Veuillez entrer 1, 2, ou 3.")
+                print("Choix invalide. Veuillez entrer 1, 2 ou 3.")
                 
         except KeyboardInterrupt:
             print("\nRetour au menu principal...")
@@ -332,7 +332,7 @@ def print_log_menu() -> None:
 def print_session_log_cli() -> None:
     """Génère et sauvegarde le journal de session en PDF (version CLI)"""
     try:
-        # Utiliser la fonction mise à jour depuis log_handler
+        # Utiliser la fonction mise à jour de log_handler
         session_logs = get_current_session_logs()
         if not session_logs:
             print("Aucun journal de session disponible à imprimer !")
@@ -346,7 +346,7 @@ def print_session_log_cli() -> None:
         log_info(f"PDF du journal de session sauvegardé dans : {pdf_path}")
         
     except (FileNotFoundError, PermissionError) as e:
-        error_msg = f"Erreur d'accès fichier lors de la génération du PDF du journal de session : {str(e)}"
+        error_msg = f"Erreur d'accès au fichier lors de la génération du PDF du journal de session : {str(e)}"
         print(error_msg)
         log_error(error_msg)
     except (IOError, OSError) as e:
@@ -358,7 +358,7 @@ def print_session_log_cli() -> None:
         print(error_msg)
         log_error(error_msg)
     except (TypeError, ValueError) as e:
-        error_msg = f"Erreur de traitement des données lors de la génération du PDF du journal de session : {str(e)}"
+        error_msg = f"Erreur de traitement de données lors de la génération du PDF du journal de session : {str(e)}"
         print(error_msg)
         log_error(error_msg)
 
@@ -373,7 +373,7 @@ def print_complete_log_cli() -> None:
         log_info(f"PDF du journal complet sauvegardé dans : {pdf_path}")
         
     except (FileNotFoundError, PermissionError) as e:
-        error_msg = f"Erreur d'accès fichier lors de la génération du PDF du journal complet : {str(e)}"
+        error_msg = f"Erreur d'accès au fichier lors de la génération du PDF du journal complet : {str(e)}"
         print(error_msg)
         log_error(error_msg)
     except (IOError, OSError) as e:
@@ -385,16 +385,16 @@ def print_complete_log_cli() -> None:
         print(error_msg)
         log_error(error_msg)
     except (TypeError, ValueError) as e:
-        error_msg = f"Erreur de traitement des données lors de la génération du PDF du journal complet : {str(e)}"
+        error_msg = f"Erreur de traitement de données lors de la génération du PDF du journal complet : {str(e)}"
         print(error_msg)
         log_error(error_msg)
 
 def cli_process_disk(disk, fs_choice, passes, use_crypto=False, crypto_fill="random"):
     """
-    Traite un seul disque pour l'interface CLI avec sortie de statut.
+    Traite un seul disque pour l'interface CLI avec affichage du statut.
     
-    Cette fonction encapsule la fonction process_disk depuis disk_operations.py
-    pour fournir une journalisation et gestion d'erreur spécifiques à CLI.
+    Cette fonction enveloppe la fonction process_disk de disk_operations.py
+    pour fournir une journalisation et une gestion d'erreurs spécifiques au CLI.
     """
     try:
         # Obtenir l'identifiant du disque pour une meilleure journalisation
@@ -403,20 +403,20 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, crypto_fill="ran
         print(f"\n{process_msg}...")
         log_info(process_msg)
         
-        # Définir une fonction de journalisation pour la CLI
+        # Définir une fonction de journalisation pour le CLI
         def log_progress(message):
             print(f"  {message}")
         
-        # Indiquer si le disque est un SSD et n'utilise pas la crypto
+        # Indiquer si le disque est un SSD et n'utilise pas crypto
         if is_ssd(disk) and not use_crypto:
-            warning_msg = f"AVERTISSEMENT : {disk_id} est un SSD - l'effacement multi-passes peut ne pas être efficace"
+            warning_msg = f"ATTENTION : {disk_id} est un SSD - l'effacement multi-passes peut ne pas être efficace"
             print(f"  {warning_msg}")
             log_info(warning_msg)
         
         # Traiter le disque en utilisant la fonction importée avec le flag crypto et la méthode de remplissage
         process_disk(disk, fs_choice, passes, use_crypto, crypto_fill, log_func=log_progress)
         
-        success_msg = f"Toutes les opérations terminées avec succès sur le disque {disk_id}"
+        success_msg = f"Toutes les opérations sur le disque {disk_id} terminées avec succès"
         print(success_msg)
         log_info(success_msg)
         return True
@@ -436,7 +436,7 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, crypto_fill="ran
         log_error(error_msg)
         return False
     except (ValueError, TypeError) as e:
-        error_msg = f"Erreur de validation des données lors du traitement du disque /dev/{disk} : {str(e)}"
+        error_msg = f"Erreur de validation de données lors du traitement du disque /dev/{disk} : {str(e)}"
         print(error_msg)
         log_error(error_msg)
         return False
@@ -446,13 +446,13 @@ def cli_process_disk(disk, fs_choice, passes, use_crypto=False, crypto_fill="ran
         log_error(error_msg)
         return False
     except KeyboardInterrupt:
-        error_msg = f"Traitement de disque interrompu pour /dev/{disk}"
+        error_msg = f"Traitement du disque interrompu pour /dev/{disk}"
         print(error_msg)
         log_error(error_msg)
         return False
 
 def run_disk_erasure_operation(args=None):
-    """Exécute le workflow d'opération d'effacement de disque"""
+    """Exécute le flux de travail de l'opération d'effacement de disque"""
     try:
         # D'abord, lister les disques et sélectionner les disques à effacer
         print("Liste des disques disponibles : ")
@@ -471,11 +471,11 @@ def run_disk_erasure_operation(args=None):
         if args and hasattr(args, 'crypto') and args.crypto:
             use_crypto = True
             crypto_fill = "zero" if (hasattr(args, 'zero') and args.zero) else "random"
-            passes = 1  # Pas utilisé pour crypto
+            passes = 1  # Non utilisé pour crypto
         else:
             use_crypto, crypto_fill = get_erasure_method()
             if use_crypto:
-                passes = 1  # Pas utilisé pour crypto
+                passes = 1  # Non utilisé pour crypto
             else:
                 if args and args.passes:
                     passes = args.passes
@@ -495,7 +495,7 @@ def run_disk_erasure_operation(args=None):
             print(method_msg)
             log_info(method_msg)
         
-        # Ensuite, obtenir la confirmation pour chaque disque avec les infos détaillées de l'opération
+        # Ensuite, obtenir la confirmation pour chaque disque avec les informations détaillées de l'opération
         confirmed_disks = get_disk_confirmations(disks, fs_choice, passes, use_crypto, crypto_fill)
         if not confirmed_disks:
             print("Aucun disque confirmé pour l'effacement. Retour au menu principal.")
@@ -554,7 +554,7 @@ def run_cli_mode(args):
             sys.exit(1)
             
         print("=" * 60)
-        print("         EFFACEUR DE DISQUE SÉCURISÉ - INTERFACE EN LIGNE DE COMMANDE")
+        print("        EFFACEUR DE DISQUE SÉCURISÉ - INTERFACE LIGNE DE COMMANDE")
         print("=" * 60)
         
         # Démarrer la journalisation de session
@@ -563,7 +563,7 @@ def run_cli_mode(args):
         # Initialiser le journal de session
         start_msg = "Session CLI démarrée"
         log_info(start_msg)
-        print(f"Session démarrée le {time.strftime('%d/%m/%Y à %H:%M:%S')}")
+        print(f"Session démarrée à {time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         while True:
             try:
@@ -593,7 +593,7 @@ def run_cli_mode(args):
                     break
                 
                 else:
-                    print("Choix invalide. Veuillez entrer 1, 2, ou 3.")
+                    print("Choix invalide. Veuillez entrer 1, 2 ou 3.")
                     
             except KeyboardInterrupt:
                 interrupt_msg = "Opération du menu principal interrompue par l'utilisateur (Ctrl+C)"
@@ -601,7 +601,7 @@ def run_cli_mode(args):
                 log_error(interrupt_msg)
                 continue
             except (EOFError, IOError) as e:
-                input_error_msg = f"Erreur d'entrée dans le menu principal : {str(e)}"
+                input_error_msg = f"Erreur de saisie dans le menu principal : {str(e)}"
                 print(f"\n{input_error_msg}")
                 log_error(input_error_msg)
                 continue
@@ -617,7 +617,7 @@ def run_cli_mode(args):
         log_error(error_msg)
         sys.exit(1)
     except (ValueError, TypeError) as e:
-        error_msg = f"Erreur de validation des données : {str(e)}"
+        error_msg = f"Erreur de validation de données : {str(e)}"
         print(error_msg)
         log_error(error_msg)
         sys.exit(1)
@@ -642,5 +642,5 @@ def run_cli_mode(args):
         log_error(error_msg)
         sys.exit(1)
     finally:
-        # S'assurer que la session se termine correctement
+        # S'assurer que la session est correctement terminée
         session_end()
