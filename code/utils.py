@@ -22,7 +22,7 @@ def run_command(command_list: list[str]) -> str:
 
 def get_disk_label(device: str) -> str:
     """
-    Récupère l’étiquette d’un périphérique disque via lsblk.
+    Récupère l'étiquette d'un périphérique disque via lsblk.
     """
     try:
         output = run_command(["lsblk", "-o", "LABEL", "-n", f"/dev/{device}"])
@@ -63,8 +63,8 @@ def list_disks() -> str:
 
 def get_disk_list() -> list[dict]:
     """
-    Retourne une liste de dictionnaires contenant :
-    'Appareil', 'Taille', 'Modèle', 'Étiquette'.
+    Retourne une liste de dictionnaires contenant les informations des disques.
+    Utilise les clés en anglais pour maintenir la compatibilité avec le reste du code.
     """
     try:
         output = list_disks()
@@ -82,10 +82,10 @@ def get_disk_list() -> list[dict]:
                 model = parts[3] if len(parts) > 3 else "Inconnu"
                 label = get_disk_label(device)
                 disks.append({
-                    "Appareil": f"/dev/{device}",
-                    "Taille": size,
-                    "Modèle": model,
-                    "Étiquette": label
+                    "device": f"/dev/{device}",
+                    "size": size,
+                    "model": model,
+                    "label": label
                 })
         return disks
     except FileNotFoundError as e:
@@ -138,7 +138,7 @@ def get_physical_drives_for_logical_volumes(active_devices: list) -> set:
     physical_drives = set()
     try:
         disk_list = get_disk_list()
-        physical_device_names = [disk['Appareil'].replace('/dev/', '') for disk in disk_list]
+        physical_device_names = [disk['device'].replace('/dev/', '') for disk in disk_list]
         for physical_device in physical_device_names:
             try:
                 output = run_command([
