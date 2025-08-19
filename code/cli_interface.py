@@ -16,7 +16,25 @@ def print_disk_details(disk):
     try:
         disk_id = get_disk_serial(disk)
         is_disk_ssd = is_ssd(disk)
-        active_disks = get_active_disk()
+        
+        # Get active disks - now returns base disk names directly
+        try:
+            active_base_disks = get_active_disk()  # Returns list of base disk names like ['nvme0n1', 'sda']
+        except (CalledProcessError, SubprocessError) as e:
+            print(f"Error detecting active disk: {str(e)}")
+            log_error(f"Error detecting active disk: {str(e)}")
+            active_base_disks = None
+        except FileNotFoundError as e:
+            print(f"Required command not found for active disk detection: {str(e)}")
+            log_error(f"Required command not found for active disk detection: {str(e)}")
+            active_base_disks = None
+        except (IOError, OSError) as e:
+            print(f"System error detecting active disk: {str(e)}")
+            log_error(f"System error detecting active disk: {str(e)}")
+            active_base_disks = None
+        
+        # Convert to set for easier lookup
+        active_physical_drives = set(active_base_disks) if active_base_disks else set()
         
         # Get disk information from get_disk_list function including label
         disk_size = "Unknown"
@@ -30,15 +48,14 @@ def print_disk_details(disk):
                 disk_label = available_disk.get("label", "No Label")
                 break
         
-        is_active = False
-        if active_disks:
-            # get_active_disk() now always returns a list of physical disk names with LVM already resolved
-            base_disk = get_base_disk(disk)
-            for active_disk in active_disks:
-                active_base_disk = get_base_disk(active_disk)
-                if base_disk == active_base_disk:
-                    is_active = True
-                    break
+        # Determine if this is the active disk - now much simpler
+        try:
+            base_device_name = get_base_disk(disk)
+            is_active = base_device_name in active_physical_drives
+        except (ValueError, TypeError) as e:
+            is_active = False
+            print(f"Error determining base device for {disk}: {str(e)}")
+            log_error(f"Error determining base device for {disk}: {str(e)}")
         
         print(f"Disk: /dev/{disk}")
         print(f"  Serial/ID: {disk_id}")
@@ -85,6 +102,25 @@ def select_disks() -> list[str]:
         available_disks = get_disk_list()
         disk_names = [disk["device"].replace("/dev/", "") for disk in available_disks]
 
+        # Get active disks - now returns base disk names directly
+        try:
+            active_base_disks = get_active_disk()
+        except (CalledProcessError, SubprocessError) as e:
+            print(f"Error detecting active disk: {str(e)}")
+            log_error(f"Error detecting active disk: {str(e)}")
+            active_base_disks = None
+        except FileNotFoundError as e:
+            print(f"Required command not found for active disk detection: {str(e)}")
+            log_error(f"Required command not found for active disk detection: {str(e)}")
+            active_base_disks = None
+        except (IOError, OSError) as e:
+            print(f"System error detecting active disk: {str(e)}")
+            log_error(f"System error detecting active disk: {str(e)}")
+            active_base_disks = None
+        
+        # Convert to set for easier lookup
+        active_physical_drives = set(active_base_disks) if active_base_disks else set()
+
         # Display summary table first
         print("\n" + "=" * 80)
         print("                          AVAILABLE DISKS SUMMARY")
@@ -96,7 +132,6 @@ def select_disks() -> list[str]:
             try:
                 disk_id = get_disk_serial(disk)
                 is_disk_ssd = is_ssd(disk)
-                active_disks = get_active_disk()
                 
                 # Get disk information including label
                 disk_size = "Unknown"
@@ -109,14 +144,14 @@ def select_disks() -> list[str]:
                         disk_label = available_disk.get("label", "No Label")
                         break
                 
-                is_active = False
-                if active_disks:
-                    base_disk = get_base_disk(disk)
-                    for active_disk in active_disks:
-                        active_base_disk = get_base_disk(active_disk)
-                        if base_disk == active_base_disk:
-                            is_active = True
-                            break
+                # Determine if this is the active disk - now much simpler
+                try:
+                    base_device_name = get_base_disk(disk)
+                    is_active = base_device_name in active_physical_drives
+                except (ValueError, TypeError) as e:
+                    is_active = False
+                    print(f"Error determining base device for {disk}: {str(e)}")
+                    log_error(f"Error determining base device for {disk}: {str(e)}")
                 
                 # Truncate long names for table display
                 model_display = (disk_model[:18] + "..") if len(disk_model) > 20 else disk_model

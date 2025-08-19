@@ -123,9 +123,10 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
 def get_active_disk():
     """
     Detect the active device backing the root filesystem.
-    Always returns a list of devices or None for consistency.
+    Always returns a list of base disk names (e.g., ['nvme0n1', 'sda']) or None for consistency.
     Uses LVM logic if the root device is a logical volume (/dev/mapper/),
     otherwise uses regular disk detection logic including live boot media detection.
+    All returned device names are resolved to their base disk names.
     """
     try:
         # Initialize devices set for collecting all active devices
@@ -160,7 +161,9 @@ def get_active_disk():
                         if any(keyword in mount_point for keyword in ['/run/live', '/lib/live', '/live/', '/cdrom']):
                             match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                             if match:
-                                devices.add(match.group(1))
+                                device_name = match.group(1)
+                                base_device = get_base_disk(device_name)
+                                devices.add(base_device)
                                 live_boot_found = True
                         
                         # Also check for USB/removable media patterns
@@ -169,7 +172,9 @@ def get_active_disk():
                             if '/media' in mount_point or '/mnt' in mount_point or '/run' in mount_point:
                                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                                 if match:
-                                    devices.add(match.group(1))
+                                    device_name = match.group(1)
+                                    base_device = get_base_disk(device_name)
+                                    devices.add(base_device)
             
             # If we still haven't found anything, fall back to df command analysis
             if not devices:
@@ -188,7 +193,9 @@ def get_active_disk():
                             if device.startswith('/dev/') and any(keyword in device for keyword in ['sd', 'nvme', 'mmc']):
                                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                                 if match:
-                                    devices.add(match.group(1))
+                                    device_name = match.group(1)
+                                    base_device = get_base_disk(device_name)
+                                    devices.add(base_device)
                 except (FileNotFoundError, CalledProcessError) as e:
                     log_error(f"Error running df command: {str(e)}")
         
@@ -199,15 +206,18 @@ def get_active_disk():
                 # LVM resolution - map to physical drives
                 active_physical_drives = get_physical_drives_for_logical_volumes([root_device])
                 
-                # Add physical drives to devices set
+                # Add physical drives to devices set, resolving to base names
                 for drive in active_physical_drives:
-                    devices.add(get_base_disk(drive))
+                    base_device = get_base_disk(drive)
+                    devices.add(base_device)
                     
             else:
                 # Regular disk - extract device name with improved regex for NVMe
                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', root_device)
                 if match:
-                    devices.add(match.group(1))
+                    device_name = match.group(1)
+                    base_device = get_base_disk(device_name)
+                    devices.add(base_device)
             
             # Also check for live boot media even in normal systems
             try:
@@ -224,7 +234,9 @@ def get_active_disk():
                         if "/run/live" in mount_point or "/lib/live" in mount_point:
                             match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                             if match:
-                                devices.add(match.group(1))
+                                device_name = match.group(1)
+                                base_device = get_base_disk(device_name)
+                                devices.add(base_device)
                                 live_boot_found = True
             except (FileNotFoundError, CalledProcessError) as e:
                 log_info(f"Could not check for live boot devices: {str(e)}")
@@ -232,13 +244,6 @@ def get_active_disk():
         # Step 4: Return logic
         if devices:
             device_list = list(devices)
-            
-            # If we found live boot devices, prioritize those (remove LVM if present)
-            if live_boot_found:
-                # Filter out LVM devices when live boot is detected, keep only regular disk names
-                final_devices = [dev for dev in device_list if not dev.startswith('/dev/')]
-                if final_devices:
-                    return final_devices
             return device_list
         else:
             log_error("No active devices found")

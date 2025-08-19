@@ -325,205 +325,197 @@ class DiskEraserGUI:
             log_error(error_msg)
 
     def refresh_disks(self) -> None:
-        # Clear existing disk checkboxes
-        for widget in self.scrollable_disk_frame.winfo_children():
-            widget.destroy()
-        
-        self.disk_vars = {}
-        
-        # Get list of disks using the common function
-        try:
-            self.disks = get_disk_list()
-        except (CalledProcessError, SubprocessError) as e:
-            error_msg = f"Error getting disk list: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            self.disks = []
-        except FileNotFoundError as e:
-            error_msg = f"Required disk utility command not found: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            self.disks = []
-        except (IOError, OSError) as e:
-            error_msg = f"System error accessing disk information: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            self.disks = []
-        
-        if not self.disks:
-            no_disk_label = ttk.Label(self.scrollable_disk_frame, text="No disks found")
-            no_disk_label.pack(pady=10)
-            self.disclaimer_var.set("")
-            self.ssd_disclaimer_var.set("")
-            self.update_gui_log("No disks found.")
-            log_info("No disks found during disk refresh")
-            return
-        
-        # Get active device(s) - now always returns a list or None with LVM resolution built-in
-        try:
-            active_device = get_active_disk()
-        except (CalledProcessError, SubprocessError) as e:
-            error_msg = f"Error detecting active disk: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            active_device = None
-        except FileNotFoundError as e:
-            error_msg = f"Required command not found for active disk detection: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            active_device = None
-        except (IOError, OSError) as e:
-            error_msg = f"System error detecting active disk: {str(e)}"
-            self.update_gui_log(error_msg)
-            log_error(error_msg)
-            active_device = None
-        
-        active_physical_drives = set()
-        
-        if active_device:
-            # get_active_disk() now always returns a list of physical disk names with LVM already resolved
-            for dev in active_device:
-                try:
-                    active_physical_drives.add(get_base_disk(dev))
-                except (ValueError, TypeError) as e:
-                    error_msg = f"Error processing device name {dev}: {str(e)}"
-                    self.update_gui_log(error_msg)
-                    log_error(error_msg)
+            # Clear existing disk checkboxes
+            for widget in self.scrollable_disk_frame.winfo_children():
+                widget.destroy()
             
-            # Only log once per session
-            if not self.active_drive_logged and active_physical_drives:
-                log_info(f"Active physical devices: {active_physical_drives}")
-                self.active_drive_logged = True
+            self.disk_vars = {}
             
-            # Set disclaimer if we found an active disk
-            if active_physical_drives:
-                self.disclaimer_var.set(
-                    "WARNING: Disk marked in red contains the active filesystem. "
-                    "Erasing this disk will cause system failure and data loss!"
-                )
+            # Get list of disks using the common function
+            try:
+                self.disks = get_disk_list()
+            except (CalledProcessError, SubprocessError) as e:
+                error_msg = f"Error getting disk list: {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+                self.disks = []
+            except FileNotFoundError as e:
+                error_msg = f"Required disk utility command not found: {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+                self.disks = []
+            except (IOError, OSError) as e:
+                error_msg = f"System error accessing disk information: {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+                self.disks = []
+            
+            if not self.disks:
+                no_disk_label = ttk.Label(self.scrollable_disk_frame, text="No disks found")
+                no_disk_label.pack(pady=10)
+                self.disclaimer_var.set("")
+                self.ssd_disclaimer_var.set("")
+                self.update_gui_log("No disks found.")
+                log_info("No disks found during disk refresh")
+                return
+            
+            # Get active device(s) - now returns base disk names directly
+            try:
+                active_base_disks = get_active_disk()  # Returns list of base disk names like ['nvme0n1', 'sda']
+            except (CalledProcessError, SubprocessError) as e:
+                error_msg = f"Error detecting active disk: {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+                active_base_disks = None
+            except FileNotFoundError as e:
+                error_msg = f"Required command not found for active disk detection: {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+                active_base_disks = None
+            except (IOError, OSError) as e:
+                error_msg = f"System error detecting active disk: {str(e)}"
+                self.update_gui_log(error_msg)
+                log_error(error_msg)
+                active_base_disks = None
+            
+            # Convert to set for easier lookup
+            active_physical_drives = set(active_base_disks) if active_base_disks else set()
+            
+            if active_base_disks:
+                # Only log once per session
+                if not self.active_drive_logged and active_physical_drives:
+                    log_info(f"Active physical devices: {active_physical_drives}")
+                    self.active_drive_logged = True
+                
+                # Set disclaimer if we found an active disk
+                if active_physical_drives:
+                    self.disclaimer_var.set(
+                        "WARNING: Disk marked in red contains the active filesystem. "
+                        "Erasing this disk will cause system failure and data loss!"
+                    )
+                else:
+                    self.disclaimer_var.set("")
             else:
                 self.disclaimer_var.set("")
-        else:
-            self.disclaimer_var.set("")
-        
-        # Check if any SSDs are present and set the SSD disclaimer
-        has_ssd = False
-        for disk in self.disks:
-            device_name = disk['device'].replace('/dev/', '')
-            try:
-                if is_ssd(device_name):
-                    has_ssd = True
-                    break
-            except (CalledProcessError, SubprocessError) as e:
-                error_msg = f"Error checking if {device_name} is SSD: {str(e)}"
-                self.update_gui_log(error_msg)
-                log_error(error_msg)
-            except FileNotFoundError as e:
-                error_msg = f"Required command not found for SSD detection: {str(e)}"
-                self.update_gui_log(error_msg)
-                log_error(error_msg)
+            
+            # Check if any SSDs are present and set the SSD disclaimer
+            has_ssd = False
+            for disk in self.disks:
+                device_name = disk['device'].replace('/dev/', '')
+                try:
+                    if is_ssd(device_name):
+                        has_ssd = True
+                        break
+                except (CalledProcessError, SubprocessError) as e:
+                    error_msg = f"Error checking if {device_name} is SSD: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                except FileNotFoundError as e:
+                    error_msg = f"Required command not found for SSD detection: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                    
+            if has_ssd:
+                self.ssd_disclaimer_var.set(
+                    "WARNING: SSD devices detected. Multiple-pass erasure may damage SSDs "
+                    "and NOT achieve secure data deletion due to SSD wear leveling. "
+                    "For SSDs, use cryptographic erase mode instead."
+                )
+            else:
+                self.ssd_disclaimer_var.set("")
+            
+            # Create checkboxes for each disk
+            for disk in self.disks:
+                # Create a container frame for each disk entry
+                disk_entry_frame = ttk.Frame(self.scrollable_disk_frame)
+                disk_entry_frame.pack(fill=tk.X, pady=5, padx=2)
                 
-        if has_ssd:
-            self.ssd_disclaimer_var.set(
-                "WARNING: SSD devices detected. Multiple-pass erasure may damage SSDs "
-                "and NOT achieve secure data deletion due to SSD wear leveling. "
-                "For SSDs, use cryptographic erase mode instead."
-            )
-        else:
-            self.ssd_disclaimer_var.set("")
+                # Top row with checkbox
+                checkbox_row = ttk.Frame(disk_entry_frame)
+                checkbox_row.pack(fill=tk.X)
+                
+                var = tk.BooleanVar()
+                self.disk_vars[disk['device']] = var
+                
+                cb = ttk.Checkbutton(checkbox_row, variable=var)
+                cb.pack(side=tk.LEFT)
+                
+                # Get disk information
+                device_name = disk['device'].replace('/dev/', '')
+                
+                # Get disk identifier with error handling
+                try:
+                    disk_identifier = get_disk_serial(device_name)
+                except (CalledProcessError, SubprocessError) as e:
+                    disk_identifier = f"{device_name} (Serial unavailable)"
+                    error_msg = f"Error getting serial for {device_name}: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                except FileNotFoundError as e:
+                    disk_identifier = f"{device_name} (Serial command not found)"
+                    error_msg = f"Required command not found for getting serial of {device_name}: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                
+                # Check if SSD with error handling
+                try:
+                    is_device_ssd = is_ssd(device_name)
+                    ssd_indicator = " (Solid_state)" if is_device_ssd else " (Mechanical)"
+                except (CalledProcessError, SubprocessError) as e:
+                    ssd_indicator = " (Type unknown)"
+                    error_msg = f"Error determining drive type for {device_name}: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                except FileNotFoundError as e:
+                    ssd_indicator = " (Type detection unavailable)"
+                    error_msg = f"Required command not found for drive type detection of {device_name}: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                
+                # Determine if this is the active disk - now much simpler
+                try:
+                    base_device_name = get_base_disk(device_name)
+                    is_active = base_device_name in active_physical_drives
+                except (ValueError, TypeError) as e:
+                    is_active = False
+                    error_msg = f"Error determining base device for {device_name}: {str(e)}"
+                    self.update_gui_log(error_msg)
+                    log_error(error_msg)
+                
+                active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
+                
+                # Get disk label from the updated utils
+                disk_label = disk.get('label', 'Unknown')
+                label_indicator = f" [Label: {disk_label}]" if disk_label and disk_label != "No Label" else " [No Label]"
+                
+                # Set text color
+                text_color = "red" if is_active else "blue" if 'is_device_ssd' in locals() and is_device_ssd else "black"
+                
+                # Create disk identifier label with wrapping
+                disk_id_label = ttk.Label(
+                    checkbox_row, 
+                    text=f"{disk_identifier}{ssd_indicator}{active_indicator}{label_indicator}",
+                    foreground=text_color,
+                    wraplength=300
+                )
+                disk_id_label.pack(side=tk.LEFT, padx=5, fill=tk.X)
+                
+                # Create a second row for disk details that will wrap if needed
+                details_row = ttk.Frame(disk_entry_frame)
+                details_row.pack(fill=tk.X, padx=25)
+                
+                # Create disk details label
+                disk_details_label = ttk.Label(
+                    details_row,
+                    text=f"Size: {disk['size']} - Model: {disk['model']}",
+                    wraplength=300,
+                    foreground=text_color
+                )
+                disk_details_label.pack(side=tk.LEFT, fill=tk.X)
+                
+                # Add a separator between disk entries for better visual separation
+                ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)  
         
-        # Create checkboxes for each disk
-        for disk in self.disks:
-            # Create a container frame for each disk entry
-            disk_entry_frame = ttk.Frame(self.scrollable_disk_frame)
-            disk_entry_frame.pack(fill=tk.X, pady=5, padx=2)
-            
-            # Top row with checkbox
-            checkbox_row = ttk.Frame(disk_entry_frame)
-            checkbox_row.pack(fill=tk.X)
-            
-            var = tk.BooleanVar()
-            self.disk_vars[disk['device']] = var
-            
-            cb = ttk.Checkbutton(checkbox_row, variable=var)
-            cb.pack(side=tk.LEFT)
-            
-            # Get disk information
-            device_name = disk['device'].replace('/dev/', '')
-            
-            # Get disk identifier with error handling
-            try:
-                disk_identifier = get_disk_serial(device_name)
-            except (CalledProcessError, SubprocessError) as e:
-                disk_identifier = f"{device_name} (Serial unavailable)"
-                error_msg = f"Error getting serial for {device_name}: {str(e)}"
-                self.update_gui_log(error_msg)
-                log_error(error_msg)
-            except FileNotFoundError as e:
-                disk_identifier = f"{device_name} (Serial command not found)"
-                error_msg = f"Required command not found for getting serial of {device_name}: {str(e)}"
-                self.update_gui_log(error_msg)
-                log_error(error_msg)
-            
-            # Check if SSD with error handling
-            try:
-                is_device_ssd = is_ssd(device_name)
-                ssd_indicator = " (Solid_state)" if is_device_ssd else " (Mechanical)"
-            except (CalledProcessError, SubprocessError) as e:
-                ssd_indicator = " (Type unknown)"
-                error_msg = f"Error determining drive type for {device_name}: {str(e)}"
-                self.update_gui_log(error_msg)
-                log_error(error_msg)
-            except FileNotFoundError as e:
-                ssd_indicator = " (Type detection unavailable)"
-                error_msg = f"Required command not found for drive type detection of {device_name}: {str(e)}"
-                self.update_gui_log(error_msg)
-                log_error(error_msg)
-            
-            # Determine if this is the active disk
-            try:
-                base_device_name = get_base_disk(device_name)
-                is_active = base_device_name in active_physical_drives
-            except (ValueError, TypeError) as e:
-                is_active = False
-                error_msg = f"Error determining base device for {device_name}: {str(e)}"
-                self.update_gui_log(error_msg)
-                log_error(error_msg)
-            
-            active_indicator = " (ACTIVE SYSTEM DISK)" if is_active else ""
-            
-            # Get disk label from the updated utils
-            disk_label = disk.get('label', 'Unknown')
-            label_indicator = f" [Label: {disk_label}]" if disk_label and disk_label != "No Label" else " [No Label]"
-            
-            # Set text color
-            text_color = "red" if is_active else "blue" if 'is_device_ssd' in locals() and is_device_ssd else "black"
-            
-            # Create disk identifier label with wrapping
-            disk_id_label = ttk.Label(
-                checkbox_row, 
-                text=f"{disk_identifier}{ssd_indicator}{active_indicator}{label_indicator}",
-                foreground=text_color,
-                wraplength=300
-            )
-            disk_id_label.pack(side=tk.LEFT, padx=5, fill=tk.X)
-            
-            # Create a second row for disk details that will wrap if needed
-            details_row = ttk.Frame(disk_entry_frame)
-            details_row.pack(fill=tk.X, padx=25)
-            
-            # Create disk details label
-            disk_details_label = ttk.Label(
-                details_row,
-                text=f"Size: {disk['size']} - Model: {disk['model']}",
-                wraplength=300,
-                foreground=text_color
-            )
-            disk_details_label.pack(side=tk.LEFT, fill=tk.X)
-            
-            # Add a separator between disk entries for better visual separation
-            ttk.Separator(self.scrollable_disk_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=2)   
-    
     def start_erasure(self) -> None:
         # Get selected disks
         selected_disks = [disk for disk, var in self.disk_vars.items() if var.get()]
