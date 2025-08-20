@@ -1,4 +1,6 @@
 import subprocess
+import tempfile
+import os
 import logging
 import sys
 import re
@@ -164,7 +166,13 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
     Raises:
         Various exceptions if the erasure process fails
     """
+    # Create unique temporary keyfile for this device to avoid conflicts
+    keyfile_fd, keyfile_path = tempfile.mkstemp(prefix=f"keyfile_{device}_", suffix=".key")
+    
     try:
+        # Close the file descriptor since we'll use the path with dd
+        os.close(keyfile_fd)
+        
         # Get stable disk identifier before erasure
         disk_serial = get_disk_serial(device)
         
@@ -180,9 +188,9 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
         if log_func:
             log_func(key_creation_msg)
             
-        # Create a temporary keyfile with random data
+        # Create a temporary keyfile with random data using unique path
         subprocess.run(
-            ["dd", "if=/dev/urandom", "of=/tmp/temp_keyfile", "bs=512", "count=8"],
+            ["dd", "if=/dev/urandom", f"of={keyfile_path}", "bs=512", "count=8"],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -197,7 +205,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
         # Create LUKS container (this will destroy all data on the device)
         cryptsetup_process = subprocess.Popen(
             ["cryptsetup", "-q", "--batch-mode", "luksFormat", 
-             f"/dev/{device}", "/tmp/temp_keyfile"],
+             f"/dev/{device}", keyfile_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True
@@ -230,10 +238,13 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
         if log_func:
             log_func(fill_msg)
             
+        # Create unique mapper name for this device to avoid conflicts
+        mapper_name = f"temp_{device}_{os.getpid()}"
+        
         # Open the encrypted device
         subprocess.run(
-            ["cryptsetup", "open", "--key-file", "/tmp/temp_keyfile", 
-             f"/dev/{device}", f"temp_{device}"],
+            ["cryptsetup", "open", "--key-file", keyfile_path, 
+             f"/dev/{device}", mapper_name],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -247,7 +258,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 log_func(fill_data_msg)
                 
             fill_process = subprocess.Popen(
-                ["dd", "if=/dev/urandom", f"of=/dev/mapper/temp_{device}", 
+                ["dd", "if=/dev/urandom", f"of=/dev/mapper/{mapper_name}", 
                 "bs=4M", "status=progress"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -260,7 +271,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 log_func(fill_data_msg)
                 
             fill_process = subprocess.Popen(
-                ["dd", "if=/dev/zero", f"of=/dev/mapper/temp_{device}", 
+                ["dd", "if=/dev/zero", f"of=/dev/mapper/{mapper_name}", 
                 "bs=4M", "status=progress"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -283,7 +294,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 logging.error("Fill operation interrupted by user (Ctrl+C)")
                 print("\nFill operation interrupted by user (Ctrl+C)")
                 # Make sure to close the mapper device before exiting
-                subprocess.run(["cryptsetup", "close", f"temp_{device}"], 
+                subprocess.run(["cryptsetup", "close", mapper_name], 
                                check=False)
                 sys.exit(130)
         
@@ -294,7 +305,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             log_func(close_msg)
             
         subprocess.run(
-            ["cryptsetup", "close", f"temp_{device}"],
+            ["cryptsetup", "close", mapper_name],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -307,7 +318,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             log_func(key_delete_msg)
             
         subprocess.run(
-            ["shred", "-u", "-z", "-n", "3", "/tmp/temp_keyfile"],
+            ["shred", "-u", "-z", "-n", "3", keyfile_path],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -357,18 +368,21 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
     finally:
         # Cleanup in case of any errors
         try:
+            # Create mapper name for cleanup (same as above)
+            mapper_name = f"temp_{device}_{os.getpid()}"
+            
             # Check if the mapper device exists and close it if it does
             result = subprocess.run(
-                ["dmsetup", "info", f"temp_{device}"],
+                ["dmsetup", "info", mapper_name],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
             if result.returncode == 0:
-                subprocess.run(["cryptsetup", "close", f"temp_{device}"], check=False)
+                subprocess.run(["cryptsetup", "close", mapper_name], check=False)
                 
             # Remove the key file if it still exists
-            if Path("/tmp/temp_keyfile").exists():
-                subprocess.run(["shred", "-u", "-z", "-n", "3", "/tmp/temp_keyfile"], check=False)
+            if Path(keyfile_path).exists():
+                subprocess.run(["shred", "-u", "-z", "-n", "3", keyfile_path], check=False)
         except subprocess.SubprocessError as e:
             logging.error(f"Subprocess error during cleanup: {e}")
         except FileNotFoundError as e:
