@@ -123,9 +123,10 @@ def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = Fals
 def get_active_disk():
     """
     Détecter le périphérique actif qui soutient le système de fichiers racine.
-    Retourne toujours une liste de périphériques ou None pour la cohérence.
+    Retourne toujours une liste de noms de disques de base (ex: ['nvme0n1', 'sda']) ou None pour la cohérence.
     Utilise la logique LVM si le périphérique racine est un volume logique (/dev/mapper/),
     sinon utilise la logique de détection de disque régulière incluant la détection des médias de démarrage live.
+    Tous les périphériques retournés sont résolus à leur disque de base.
     """
     try:
         # Initialiser l'ensemble des périphériques pour collecter tous les périphériques actifs
@@ -160,20 +161,22 @@ def get_active_disk():
                         if any(keyword in mount_point for keyword in ['/run/live', '/lib/live', '/live/', '/cdrom']):
                             match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                             if match:
-                                devices.add(match.group(1))
+                                device_name = match.group(1)
+                                base_device = get_base_disk(device_name)
+                                devices.add(base_device)
                                 live_boot_found = True
                         
-                        # Vérifier aussi les motifs de média USB/amovible
+                        # Vérifier aussi les périphériques USB/amovibles
                         elif device.startswith('/dev/') and any(keyword in device for keyword in ['sd', 'nvme', 'mmc']):
-                            # Vérifier si cela ressemble à un périphérique amovible en vérifiant le point de montage
                             if '/media' in mount_point or '/mnt' in mount_point or '/run' in mount_point:
                                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                                 if match:
-                                    devices.add(match.group(1))
+                                    device_name = match.group(1)
+                                    base_device = get_base_disk(device_name)
+                                    devices.add(base_device)
             
-            # Si nous n'avons toujours rien trouvé, se rabattre sur l'analyse de la commande df
+            # Si rien trouvé, fallback : utiliser df
             if not devices:
-                # Utiliser la commande df au lieu de voir /proc/mounts
                 try:
                     output = run_command(["df", "-h"])
                     lines = output.strip().split('\n')
@@ -184,47 +187,50 @@ def get_active_disk():
                             device = parts[0]
                             mount_point = parts[5]
                             
-                            # Chercher tous les périphériques de stockage montés
                             if device.startswith('/dev/') and any(keyword in device for keyword in ['sd', 'nvme', 'mmc']):
                                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                                 if match:
-                                    devices.add(match.group(1))
+                                    device_name = match.group(1)
+                                    base_device = get_base_disk(device_name)
+                                    devices.add(base_device)
                 except (FileNotFoundError, CalledProcessError) as e:
                     log_error(f"Erreur lors de l'exécution de la commande df : {str(e)}")
         
         else:
-            # Étape 3 : Gérer le périphérique racine normal (système installé)
-            # Vérifier si c'est LVM/device mapper
+            # Étape 3 : Périphérique racine normal
             if '/dev/mapper/' in root_device or '/dev/dm-' in root_device:
-                # Résolution LVM - mapper aux disques physiques
+                # Résolution LVM - trouver les disques physiques
                 active_physical_drives = get_physical_drives_for_logical_volumes([root_device])
                 
-                # Ajouter les disques physiques à l'ensemble des périphériques
                 for drive in active_physical_drives:
-                    devices.add(get_base_disk(drive))
+                    base_device = get_base_disk(drive)
+                    devices.add(base_device)
                     
             else:
-                # Disque régulier - extraire le nom du périphérique avec regex améliorée pour NVMe
+                # Disque régulier - extraire le nom du périphérique avec regex
                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', root_device)
                 if match:
-                    devices.add(match.group(1))
+                    device_name = match.group(1)
+                    base_device = get_base_disk(device_name)
+                    devices.add(base_device)
             
-            # Vérifier aussi les médias de démarrage live même dans les systèmes normaux
+            # Vérifier aussi les médias de démarrage live
             try:
                 output = run_command(["df", "-h"])
                 lines = output.strip().split('\n')
                 
-                for line in lines[1:]:  # Ignorer la ligne d'en-tête
+                for line in lines[1:]:  # Ignorer l'en-tête
                     parts = line.split()
                     if len(parts) >= 6:
                         device = parts[0]
                         mount_point = parts[5]
                         
-                        # Vérifier les points de montage de démarrage live
                         if "/run/live" in mount_point or "/lib/live" in mount_point:
                             match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                             if match:
-                                devices.add(match.group(1))
+                                device_name = match.group(1)
+                                base_device = get_base_disk(device_name)
+                                devices.add(base_device)
                                 live_boot_found = True
             except (FileNotFoundError, CalledProcessError) as e:
                 log_info(f"Impossible de vérifier les périphériques de démarrage live : {str(e)}")
@@ -233,12 +239,12 @@ def get_active_disk():
         if devices:
             device_list = list(devices)
             
-            # Si nous avons trouvé des périphériques de démarrage live, les prioriser (supprimer LVM si présent)
+            # Si démarrage live trouvé, prioriser ces périphériques
             if live_boot_found:
-                # Filtrer les périphériques LVM quand le démarrage live est détecté, garder seulement les noms de disques réguliers
                 final_devices = [dev for dev in device_list if not dev.startswith('/dev/')]
                 if final_devices:
                     return final_devices
+            
             return device_list
         else:
             log_error("Aucun périphérique actif trouvé")

@@ -1,4 +1,6 @@
 import subprocess
+import tempfile
+import os
 import logging
 import sys
 import re
@@ -149,7 +151,7 @@ def erase_disk_hdd(device: str, passes: int, log_func=None) -> str:
         print(f"\n{error_message}")
         sys.exit(130)
 
-def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None) -> bool:
+def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None) -> str:
     """
     Effacer de manière sécurisée un disque en utilisant l'effacement cryptographique :
     chiffrer tout le disque avec une clé aléatoire, puis supprimer la clé rendant
@@ -166,7 +168,13 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
     Raises:
         Diverses exceptions si le processus d'effacement échoue
     """
+    # Créer un fichier clé temporaire unique pour ce périphérique pour éviter les conflits
+    keyfile_fd, keyfile_path = tempfile.mkstemp(prefix=f"keyfile_{device}_", suffix=".key")
+    
     try:
+        # Fermer le descripteur de fichier puisque nous utiliserons le chemin avec dd
+        os.close(keyfile_fd)
+        
         # Obtenir l'identifiant stable du disque avant l'effacement
         disk_serial = get_disk_serial(device)
         
@@ -182,9 +190,9 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
         if log_func:
             log_func(key_creation_msg)
             
-        # Créer un fichier clé temporaire avec des données aléatoires
+        # Créer un fichier clé temporaire avec des données aléatoires en utilisant un chemin unique
         subprocess.run(
-            ["dd", "if=/dev/urandom", "of=/tmp/temp_keyfile", "bs=512", "count=8"],
+            ["dd", "if=/dev/urandom", f"of={keyfile_path}", "bs=512", "count=8"],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -199,7 +207,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
         # Créer un conteneur LUKS (cela détruira toutes les données sur le périphérique)
         cryptsetup_process = subprocess.Popen(
             ["cryptsetup", "-q", "--batch-mode", "luksFormat", 
-             f"/dev/{device}", "/tmp/temp_keyfile"],
+             f"/dev/{device}", keyfile_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True
@@ -232,10 +240,13 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
         if log_func:
             log_func(fill_msg)
             
+        # Créer un nom de mapper unique pour ce périphérique pour éviter les conflits
+        mapper_name = f"temp_{device}_{os.getpid()}"
+        
         # Ouvrir le périphérique chiffré
         subprocess.run(
-            ["cryptsetup", "open", "--key-file", "/tmp/temp_keyfile", 
-             f"/dev/{device}", f"temp_{device}"],
+            ["cryptsetup", "open", "--key-file", keyfile_path, 
+             f"/dev/{device}", mapper_name],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -249,7 +260,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 log_func(fill_data_msg)
                 
             fill_process = subprocess.Popen(
-                ["dd", "if=/dev/urandom", f"of=/dev/mapper/temp_{device}", 
+                ["dd", "if=/dev/urandom", f"of=/dev/mapper/{mapper_name}", 
                 "bs=4M", "status=progress"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -262,7 +273,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 log_func(fill_data_msg)
                 
             fill_process = subprocess.Popen(
-                ["dd", "if=/dev/zero", f"of=/dev/mapper/temp_{device}", 
+                ["dd", "if=/dev/zero", f"of=/dev/mapper/{mapper_name}", 
                 "bs=4M", "status=progress"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -285,7 +296,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
                 logging.error("Opération de remplissage interrompue par l'utilisateur (Ctrl+C)")
                 print("\nOpération de remplissage interrompue par l'utilisateur (Ctrl+C)")
                 # S'assurer de fermer le périphérique mapper avant de quitter
-                subprocess.run(["cryptsetup", "close", f"temp_{device}"], 
+                subprocess.run(["cryptsetup", "close", mapper_name], 
                                check=False)
                 sys.exit(130)
         
@@ -296,7 +307,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             log_func(close_msg)
             
         subprocess.run(
-            ["cryptsetup", "close", f"temp_{device}"],
+            ["cryptsetup", "close", mapper_name],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -309,7 +320,7 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
             log_func(key_delete_msg)
             
         subprocess.run(
-            ["shred", "-u", "-z", "-n", "3", "/tmp/temp_keyfile"],
+            ["shred", "-u", "-z", "-n", "3", keyfile_path],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -359,18 +370,21 @@ def erase_disk_crypto(device: str, filling_method: str = "random", log_func=None
     finally:
         # Nettoyage en cas d'erreurs
         try:
+            # Créer le nom de mapper pour le nettoyage (le même que ci-dessus)
+            mapper_name = f"temp_{device}_{os.getpid()}"
+            
             # Vérifier si le périphérique mapper existe et le fermer s'il existe
             result = subprocess.run(
-                ["dmsetup", "info", f"temp_{device}"],
+                ["dmsetup", "info", mapper_name],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
             if result.returncode == 0:
-                subprocess.run(["cryptsetup", "close", f"temp_{device}"], check=False)
+                subprocess.run(["cryptsetup", "close", mapper_name], check=False)
                 
             # Supprimer le fichier clé s'il existe encore
-            if Path("/tmp/temp_keyfile").exists():
-                subprocess.run(["shred", "-u", "-z", "-n", "3", "/tmp/temp_keyfile"], check=False)
+            if Path(keyfile_path).exists():
+                subprocess.run(["shred", "-u", "-z", "-n", "3", keyfile_path], check=False)
         except subprocess.SubprocessError as e:
             logging.error(f"Erreur de sous-processus lors du nettoyage : {e}")
         except FileNotFoundError as e:

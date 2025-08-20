@@ -16,7 +16,25 @@ def print_disk_details(disk):
     try:
         disk_id = get_disk_serial(disk)
         is_disk_ssd = is_ssd(disk)
-        active_disks = get_active_disk()
+        
+        # Obtenir les disques actifs - retourne maintenant directement les noms de disques de base
+        try:
+            active_base_disks = get_active_disk()  # Retourne une liste de noms de disques de base comme ['nvme0n1', 'sda']
+        except (CalledProcessError, SubprocessError) as e:
+            print(f"Erreur lors de la détection du disque actif : {str(e)}")
+            log_error(f"Erreur lors de la détection du disque actif : {str(e)}")
+            active_base_disks = None
+        except FileNotFoundError as e:
+            print(f"Commande requise introuvable pour la détection du disque actif : {str(e)}")
+            log_error(f"Commande requise introuvable pour la détection du disque actif : {str(e)}")
+            active_base_disks = None
+        except (IOError, OSError) as e:
+            print(f"Erreur système lors de la détection du disque actif : {str(e)}")
+            log_error(f"Erreur système lors de la détection du disque actif : {str(e)}")
+            active_base_disks = None
+        
+        # Convertir en ensemble pour une recherche plus facile
+        active_physical_drives = set(active_base_disks) if active_base_disks else set()
         
         # Obtenir les informations du disque depuis get_disk_list incluant le label
         disk_size = "Inconnu"
@@ -30,15 +48,14 @@ def print_disk_details(disk):
                 disk_label = available_disk.get("label", "Pas d'étiquette")
                 break
         
-        is_active = False
-        if active_disks:
-            # get_active_disk() retourne maintenant toujours une liste de noms de disques physiques avec LVM déjà résolu
-            base_disk = get_base_disk(disk)
-            for active_disk in active_disks:
-                active_base_disk = get_base_disk(active_disk)
-                if base_disk == active_base_disk:
-                    is_active = True
-                    break
+        # Déterminer si c'est le disque actif - maintenant beaucoup plus simple
+        try:
+            base_device_name = get_base_disk(disk)
+            is_active = base_device_name in active_physical_drives
+        except (ValueError, TypeError) as e:
+            is_active = False
+            print(f"Erreur lors de la détermination du périphérique de base pour {disk} : {str(e)}")
+            log_error(f"Erreur lors de la détermination du périphérique de base pour {disk} : {str(e)}")
         
         print(f"Disque : /dev/{disk}")
         print(f"  Numéro de série/ID : {disk_id}")
@@ -85,6 +102,25 @@ def select_disks() -> list[str]:
         available_disks = get_disk_list()
         disk_names = [disk["device"].replace("/dev/", "") for disk in available_disks]
 
+        # Obtenir les disques actifs - retourne maintenant directement les noms de disques de base
+        try:
+            active_base_disks = get_active_disk()
+        except (CalledProcessError, SubprocessError) as e:
+            print(f"Erreur lors de la détection du disque actif : {str(e)}")
+            log_error(f"Erreur lors de la détection du disque actif : {str(e)}")
+            active_base_disks = None
+        except FileNotFoundError as e:
+            print(f"Commande requise introuvable pour la détection du disque actif : {str(e)}")
+            log_error(f"Commande requise introuvable pour la détection du disque actif : {str(e)}")
+            active_base_disks = None
+        except (IOError, OSError) as e:
+            print(f"Erreur système lors de la détection du disque actif : {str(e)}")
+            log_error(f"Erreur système lors de la détection du disque actif : {str(e)}")
+            active_base_disks = None
+        
+        # Convertir en ensemble pour une recherche plus facile
+        active_physical_drives = set(active_base_disks) if active_base_disks else set()
+
         # Afficher d'abord le tableau récapitulatif
         print("\n" + "=" * 80)
         print("                        RÉSUMÉ DES DISQUES DISPONIBLES")
@@ -96,7 +132,6 @@ def select_disks() -> list[str]:
             try:
                 disk_id = get_disk_serial(disk)
                 is_disk_ssd = is_ssd(disk)
-                active_disks = get_active_disk()
                 
                 # Obtenir les informations du disque incluant l'étiquette
                 disk_size = "Inconnu"
@@ -109,14 +144,14 @@ def select_disks() -> list[str]:
                         disk_label = available_disk.get("label", "Pas d'étiquette")
                         break
                 
-                is_active = False
-                if active_disks:
-                    base_disk = get_base_disk(disk)
-                    for active_disk in active_disks:
-                        active_base_disk = get_base_disk(active_disk)
-                        if base_disk == active_base_disk:
-                            is_active = True
-                            break
+                # Déterminer si c'est le disque actif - maintenant beaucoup plus simple
+                try:
+                    base_device_name = get_base_disk(disk)
+                    is_active = base_device_name in active_physical_drives
+                except (ValueError, TypeError) as e:
+                    is_active = False
+                    print(f"Erreur lors de la détermination du périphérique de base pour {disk} : {str(e)}")
+                    log_error(f"Erreur lors de la détermination du périphérique de base pour {disk} : {str(e)}")
                 
                 # Tronquer les noms longs pour l'affichage du tableau
                 model_display = (disk_model[:18] + "..") if len(disk_model) > 20 else disk_model
