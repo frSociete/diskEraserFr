@@ -89,6 +89,12 @@ sudo systemctl restart systemd-udevd
 - **Flexible Formats**: Supports NTFS, EXT4, and VFAT file systems
 - **Multiple Deployment Options**: Run as Python code, Linux command, or bootable ISO
 - **Improved disks listing format in GUI mode**: Prompts useful data about disks detected
+- **Comprehensive Logging System**:
+  - **Real-time Progress Tracking**: Monitor operation status with detailed step logging
+  - **Error Handling & Recovery**: Advanced error detection
+  - **Session Logs**: Track individual operation sessions with timestamps
+  - **Complete Operation History**: Maintain full audit trail of all disk operations
+  - **PDF Export Capability**: Export logs to PDF format for printing or archiving
 
 <div style="display: flex; align-items: center;">
   <img src="./img/gui" alt="GUI" width="600" style="margin-right: 20px;">
@@ -172,8 +178,7 @@ python3 main.py --cli -f ntfs     # CLI, NTFS, default passes
 ```
 
 ---
-
-## Project Structure 📁
+## Project Structure 🏗
 
 ```
 project/
@@ -205,6 +210,7 @@ project/
   - For HDDs: Multiple overwrite passes
   - For SSDs: Cryptographic erasure (random or zero fill)
 - **System Protection**: The tool detects and warns about active system disks.
+- **Audit Trail**: Maintain log files for compliance and troubleshooting purposes.
 
 ---
 
