@@ -1,126 +1,97 @@
-# Disk Eraser - Secure Disk Wiping and Formatting Tool 💽
+# Disk Eraser - Outil de Nettoyage et Formatage Sécurisé de Disques 💽
 
 <div style="display: flex; align-items: center;">
   <img src="./img/background" alt="Logo" width="120" style="margin-right: 20px;">
   <p>
-    <b>Disk Eraser</b> is a tool for securely erasing data from storage devices while providing the option to format with your chosen file system (EXT4, NTFS, or VFAT). It supports parallel disk erasure with configurable overwrite passes for thorough data sanitization.
+    <b>Disk Eraser</b> est un outil pour effacer de manière sécurisée les données des périphériques de stockage tout en offrant la possibilité de formater avec le système de fichiers de votre choix (EXT4, NTFS ou VFAT). Il prend en charge l'effacement parallèle des disques avec des passages d'écrasement configurables pour une désinfection approfondie des données.
   </p>
 </div>
 
-## Secure Erasure Methods
+## Méthodes d'Effacement Sécurisé
 
-### For HDDs: Multiple Overwrite Passes
-- Recommended for traditional mechanical hard drives
-- Uses multiple passes of random data followed by a zero pass
-- Prevents data recovery through physical analysis of magnetic residue
+### Pour les Disques Durs (HDD) : Passes Multiples d'Écrasement
+- Recommandé pour les disques durs mécaniques traditionnels
+- Utilise plusieurs passages de données aléatoires suivis d'un passage à zéro
+- Empêche la récupération des données par analyse physique des résidus magnétiques
 
-### For SSDs: Cryptographic Erasure
-- Recommended for solid-state drives and flash storage
-- Options include:
-  - **Random Data Fill**: Overwrites with cryptographically secure random data
-  - **Zero Fill**: Quick erasure by writing zeros to all addressable locations
-- Works with ATA Secure Erase for compatible devices
+### Pour les SSD : Effacement Cryptographique
+- Recommandé pour les disques SSD et le stockage flash
+- Les options incluent :
+  - **Remplissage de Données Aléatoires** : Écrase avec des données aléatoires cryptographiquement sécurisées
+  - **Remplissage à Zéro** : Effacement rapide en écrivant des zéros à tous les emplacements adressables
+- Fonctionne avec ATA Secure Erase pour les appareils compatibles
 
-⚠️ **SSD COMPATIBILITY WARNING**
+> ⚠️ **AVERTISSEMENT DE COMPATIBILITÉ SSD**
+>
+> - **Répartition d'Usure des SSD** : Rend les méthodes traditionnelles d'écrasement moins efficaces
+> - **Sur-provisionnement** : L'espace réservé caché peut conserver des données
+> - **Durée de Vie de l'Appareil** : Les passages multiples peuvent réduire la longévité du SSD
+>
+> Pour les SSD, il est recommandé d'utiliser l'effacement cryptographique plutôt que les passages multiples d'écrasement.
 
-While this tool can detect and work with SSDs, please note:
+***
 
-- **SSD Wear Leveling**: Makes traditional overwrite methods less effective
-- **Over-provisioning**: Hidden reserved space may retain data
-- **Device Lifespan**: Multiple passes can reduce SSD longevity
- 
-For SSDs, cryptographic erasure methods are recommended over multiple overwrite passes.
+⚠️ **AVERTISSEMENT DE COMPATIBILITÉ DES CLÉS USB**
 
-⚠️ **USB FLASH DRIVE PERFORMANCE WARNING**
- 
-The Linux kernel often incorrectly marks USB flash drives as rotational devices, which can significantly impact performance during erasure operations. This is a known kernel issue affecting USB storage devices.
- 
-**To fix this issue when NOT using the custom ISO**, create the following udev rule:
+Le noyau Linux marque souvent incorrectement les clés USB comme des périphériques rotatifs, ce qui peut impacter les performances lors des effacements sur USB.
 
-This rule is available on stackexchange : [Solution from stackexchange](https://unix.stackexchange.com/questions/439109/set-usb-flash-drive-as-non-rotational-drive)
+**Pour corriger ce problème (hors ISO officielle), créez la règle suivante :**
 
-1. Create the file `/etc/udev/rules.d/usb-flash.rules` with root privileges:
 ```bash
 sudo nano /etc/udev/rules.d/usb-flash.rules
-```
-
-2. Add the following content:
-
-```bash
-# Try to catch USB flash drives and set them as non-rotational
-# c.f. https://mpdesouza.com/blog/kernel-adventures-are-usb-sticks-rotational-devices/
-
-# Device is already marked as non-rotational, skip over it
-ATTR{queue/rotational}=="0", GOTO="skip"
-
-# Device has some sort of queue support, likely to be an HDD actually
-ATTRS{queue_type}!="none", GOTO="skip"
-
-# Flip the rotational bit on this removable device and give audible signs of having caught a match
-ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", ATTR{queue/rotational}="0"
-ATTR{removable}=="1", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/bin/beep -f 70 -r 2"
-
-LABEL="skip"
-```
-
-3. Reload udev rules and restart the udev service:
-```bash
+# ... puis copiez le contenu proposé dans la documentation ...
 sudo udevadm control --reload-rules
 sudo systemctl restart systemd-udevd
 ```
- 
-4. Reconnect your USB flash drives to apply the new rules.
+Reconnectez vos clés USB pour appliquer les règles.
 
-**Note**: The custom ISO images already include these optimization rules.
+***
 
----
+## Fonctionnalités ✨
 
-## Features ✨
-
-- **Dual Interface**: CLI and GUI modes for flexibility
-- **Smart Device Detection**: Automatically identifies electronic vs mechanical devices
-- **LVM Support**: Handles LVM disk management
-- **Secure Erasure Methods**:
-  - Multiple overwrite passes for HDDs
-  - Cryptographic erasure for SSDs (random or zero fill)
-- **Safety Features**: Detects active system disks and requires confirmation
-- **Parallel Processing**: Erases multiple disks simultaneously
-- **Post-Erasure Setup**: Automatic partitioning and formatting
-- **Flexible Formats**: Supports NTFS, EXT4, and VFAT file systems
-- **Multiple Deployment Options**: Run as Python code, Linux command, or bootable ISO
-- **Improved disks listing format in GUI mode**: Prompts useful data about disks detected
-- **Comprehensive Logging System**:
-  - **Real-time Progress Tracking**: Monitor operation status with detailed step logging
-  - **Error Handling & Recovery**: Advanced error detection
-  - **Session Logs**: Track individual operation sessions with timestamps
-  - **Complete Operation History**: Maintain full audit trail of all disk operations
-  - **PDF Export Capability**: Export logs to PDF format for printing or archiving
+- **Double Interface** : Modes CLI et GUI pour plus de flexibilité
+- **Détection Intelligente des Disques** : Identifie automatiquement les SSD et HDD
+- **Support LVM** : Prise en charge des volumes LVM dans la détection des disques physiques
+- **Méthodes d’Effacement Sécurisé** :
+   - Passes multiples d'écrasement (HDD)
+   - Effacement cryptographique (SSD, aléatoire ou zéro)
+- **Fonctionnalités de Sécurité** : Détecte les disques système actifs et nécessite une confirmation
+- **Traitement Parallèle** : Effacement simultané de plusieurs disques
+- **Post-Effacement** : Partitionnement et formatage automatiques
+- **Formats Flexibles** : EXT4, NTFS, VFAT pris en charge
+- **Déploiement** : Exécution comme script Python, commande Linux ou ISO bootable
+- **Journalisation Complète** :
+   - Suivi en temps réel de la progression
+   - Gestion fine des erreurs
+   - Audit détaillé (session, historique)
+   - Export PDF des logs pour archivage et conformité
 
 <div style="display: flex; align-items: center;">
   <img src="./img/gui" alt="GUI" width="600" style="margin-right: 20px;">
 </div>
----
 
-## Prerequisites 📋
+***
 
-- **Root privileges** (required for disk access)
-- **Python 3** with **Tkinter** (for GUI mode)
-- **Basic disk management knowledge** - this tool **permanently erases data** ⚠️
+## Prérequis 📋
 
----
+- **Privilèges root** (accès disque)
+- **Python 3** avec **Tkinter** pour le mode GUI
+- **Notions de gestion de disque** – cet outil **efface définitivement les données** ⚠️
 
-## Installation and Usage 🚀
+***
 
-### Using Python Code 🐍
+## Installation et Utilisation 🚀
+
+### Utilisation du Code Python 🐍
 
 ```bash
-git clone https://github.com/Bolo101/diskEraser.git
+git clone https://github.com/frSociete/diskEraserFr.git
 cd diskEraser/code/python
-sudo python3 main.py         # GUI mode (default)
-sudo python3 main.py --cli   # Command-line mode
+sudo python3 main.py         # Mode GUI (par défaut)
+sudo python3 main.py --cli   # Mode ligne de commande
 ```
 
-### Install as Linux Command 💻
+### Installation en tant que Commande Linux 💻
 
 ```bash
 sudo mkdir -p /usr/local/bin/diskeraser
@@ -128,103 +99,94 @@ sudo cp diskEraser/code/python/*.py /usr/local/bin/diskeraser
 sudo chmod +x /usr/local/bin/diskeraser/main.py
 sudo ln -s /usr/local/bin/diskeraser/main.py /usr/local/bin/diskeraser
 
-# Then run:
-sudo diskeraser           # GUI mode
-sudo diskeraser --cli     # CLI mode
+# Puis exécutez :
+sudo diskeraser           # Mode GUI
+sudo diskeraser --cli     # Mode CLI
 ```
 
-### Using Bootable ISO 💿
+### Utilisation de l’ISO amorçable 💿
 
-1. **Create or download ISO**:
-   - Create XFCE based iso:
-   
+1. **Créer ou télécharger l'ISO** :
    ```bash
    cd diskEraser/iso && make
    ```
+   Ou téléchargez la version précompilée en français :  
+   [Disk Eraser Fr ISO v5.3](https://archive.org/download/diskEraser-v5.3/diskEraserFr-v5.3.iso)
 
-   - Create KDE based iso:
-
-   ```bash
-   cd diskEraser/iso && make kde
-   ```
-   - Pre-built ISO
-
-   Download pre-built: [Disk Eraser ISO v5.3](https://archive.org/download/diskEraser-v5.3/diskEraser-v5.3.iso)
-
-2. **Flash to USB**:
+2. **Flashez sur une clé USB :**
    ```bash
    sudo dd if=secure_disk_eraser.iso of=/dev/sdX bs=4M status=progress
    ```
 
-3. **Boot from USB** and follow on-screen instructions
+3. **Démarrez sur l’USB** et suivez les instructions à l’écran.
 
----
+***
 
-## Command Line Options ⌨️
+## Options en Ligne de Commande ⌨️
 
 ```bash
-# Format options
+# Système de fichiers
 -f ext4|ntfs|vfat, --filesystem ext4|ntfs|vfat
 
-# Erase pass count
--p NUMBER, --passes NUMBER
+# Nombre de passes (HDD)
+-p NOMBRE, --passes NOMBRE
 
-# Interface mode
---cli           # Use command-line interface
+# Interface (CLI ou GUI)
+--cli          # Mode ligne de commande
 
-# Examples:
+# Exemples :
 python3 main.py -f ext4 -p 3      # GUI, EXT4, 3 passes
-python3 main.py --cli -f ntfs     # CLI, NTFS, default passes
+python3 main.py --cli -f ntfs     # CLI, NTFS, passes par défaut
 ```
 
----
-## Project Structure 🏗
+***
+
+## Structure du Projet 📁
 
 ```
 project/
-├── README.md               # Documentation
-├── code/                   # Python scripts
-│   ├── disk_erase.py       # Erasure module
-│   ├── disk_format.py      # Formatting module
-│   ├── disk_operations.py  # Disk operations
-│   ├── disk_partition.py   # Partitioning module
-│   ├── gui_interface.py    # GUI interface
-│   ├── cli_interface.py    # CLI interface
-│   ├── log_handler.py      # Logging functionality
-│   ├── main.py             # Main program logic
-│   └── utils.py            # Utility functions
-├── iso/                    # ISO creation resources
-│   ├── forgeIsoPy.sh       # ISO generator
-│   └── makefile            # Build automation
-├── setup.sh                # Dependency installer
-└── LICENSE                 # CC 4.0 license
+├── README.md
+├── code/
+│   ├── disk_erase.py
+│   ├── disk_format.py
+│   ├── disk_operations.py
+│   ├── disk_partition.py
+│   ├── gui_interface.py
+│   ├── cli_interface.py
+│   ├── log_handler.py
+│   ├── main.py
+│   └── utils.py
+├── iso/
+│   ├── forgeIsoKde.sh
+│   ├── forgeIsoXfce.sh
+│   └── makefile
+├── setup.sh
+└── LICENSE
 ```
 
----
+***
 
-## Safety Notes ⚠️
+## Notes de Sécurité ⚠️
 
-- **Data Loss**: This tool **permanently erases** data. Back up important information first.
-- **Root Access**: Run with appropriate privileges (root/sudo).
-- **Storage Types**: Different erasure methods are optimized for different storage technologies:
-  - For HDDs: Multiple overwrite passes
-  - For SSDs: Cryptographic erasure (random or zero fill)
-- **System Protection**: The tool detects and warns about active system disks.
-- **Audit Trail**: Maintain log files for compliance and troubleshooting purposes.
+- **Perte de Données** : Cet outil efface *définitivement* les données. Sauvegardez d’abord !
+- **Accès root requis**
+- **Typologie des Stockages** : Optimisé pour différents supports :
+   - HDD : écrasement multi-passes
+   - SSD : effacement cryptographique
+- **Protection système** : Avertissement et détection des disques système actifs
+- **Audit** : Conservation des logs pour vérification et analyse
 
----
+***
 
-## License ⚖️
+## Licence ⚖️
 
-This project is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Projet sous licence [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
-![Creative Commons License](https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png)
+![Licence Creative Commons](https://i.creativecommons.org/l/by-nc-sa/4. libre de :
+- **Partager** : Copier et redistribuer le matériel
+- **Adapter** : Remixer, transformer, faire évoluer sous même licence
 
-You are free to:
-- **Share**: Copy and redistribute the material
-- **Adapt**: Remix, transform, and build upon the material
-
-Under the following terms:
-- **Attribution**: Provide appropriate credit
-- **NonCommercial**: Not for commercial use
-- **ShareAlike**: Distribute modifications under the same license
+Selon :
+- **Attribution** obligatoire
+- **Pas d’utilisation commerciale**
+- **Partage dans les mêmes conditions**

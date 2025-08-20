@@ -9,135 +9,135 @@ from log_handler import log_info, log_error, log_erase_operation
 
 def process_disk(disk: str, fs_choice: str, passes: int, use_crypto: bool = False, crypto_fill: str = "random", log_func=None) -> None:
     """
-    Process a single disk: erase, partition, and format it.
+    Traiter un seul disque : l'effacer, le partitionner et le formater.
     
     Args:
-        disk: The disk name (e.g. 'sda')
-        fs_choice: Filesystem choice for formatting
-        passes: Number of passes for secure erasure
-        use_crypto: Whether to use cryptographic erasure method
-        crypto_fill: Fill method for crypto erasure ('random' or 'zero')
-        log_func: Optional function for logging progress
+        disk: Le nom du disque (ex: 'sda')
+        fs_choice: Choix du système de fichiers pour le formatage
+        passes: Nombre de passes pour l'effacement sécurisé
+        use_crypto: Utiliser ou non la méthode d'effacement cryptographique
+        crypto_fill: Méthode de remplissage pour l'effacement crypto ('random' ou 'zero')
+        log_func: Fonction optionnelle pour l'enregistrement de la progression
     """
     try:
         disk_id = get_disk_serial(disk)
-        log_info(f"Processing disk identifier: {disk_id}")
+        log_info(f"Traitement de l'identifiant de disque : {disk_id}")
         if log_func:
-            log_func(f"Processing disk identifier: {disk_id}")
+            log_func(f"Traitement de l'identifiant de disque : {disk_id}")
         
-        # Check if disk is SSD and log a warning
+        # Vérifier si le disque est un SSD et enregistrer un avertissement
         if is_ssd(disk) and not use_crypto:
-            log_info(f"WARNING: {disk_id} is an SSD. Multiple-pass erasure may not securely erase all data.")
+            log_info(f"ATTENTION : {disk_id} est un SSD. L'effacement multi-passes peut ne pas effacer de manière sécurisée toutes les données.")
             if log_func:
-                log_func(f"WARNING: {disk_id} is an SSD. Multiple-pass erasure may not securely erase all data.")
+                log_func(f"ATTENTION : {disk_id} est un SSD. L'effacement multi-passes peut ne pas effacer de manière sécurisée toutes les données.")
         
-        # Erase disk using selected method
+        # Effacer le disque en utilisant la méthode sélectionnée
         if use_crypto:
-            method_str = f"Cryptographic erasure with {crypto_fill} filling"
-            log_info(f"Using cryptographic erasure ({crypto_fill} fill) for disk ID: {disk_id}")
+            method_str = f"Effacement cryptographique avec remplissage {crypto_fill}"
+            log_info(f"Utilisation de l'effacement cryptographique (remplissage {crypto_fill}) pour l'ID de disque : {disk_id}")
             if log_func:
-                log_func(f"Using cryptographic erasure ({crypto_fill} fill) for disk ID: {disk_id}")
+                log_func(f"Utilisation de l'effacement cryptographique (remplissage {crypto_fill}) pour l'ID de disque : {disk_id}")
             erase_result = erase_disk_crypto(disk, filling_method=crypto_fill, log_func=log_func)
         else:
-            method_str = f"{passes} overwriting passes"
-            log_info(f"Using standard multi-pass erasure for disk ID: {disk_id}")
+            method_str = f"{passes} passes d'écrasement"
+            log_info(f"Utilisation de l'effacement standard multi-passes pour l'ID de disque : {disk_id}")
             if log_func:
-                log_func(f"Using standard multi-pass erasure for disk ID: {disk_id}")
+                log_func(f"Utilisation de l'effacement standard multi-passes pour l'ID de disque : {disk_id}")
             erase_result = erase_disk_hdd(disk, passes, log_func=log_func)
         
-        log_info(f"Erase completed on disk ID: {disk_id}")
+        log_info(f"Effacement terminé sur l'ID de disque : {disk_id}")
         if log_func:
-            log_func(f"Erase completed on disk ID: {disk_id}")
+            log_func(f"Effacement terminé sur l'ID de disque : {disk_id}")
         
-        log_info(f"Creating partition on disk ID: {disk_id}")
+        log_info(f"Création de partition sur l'ID de disque : {disk_id}")
         if log_func:
-            log_func(f"Creating partition on disk ID: {disk_id}")
+            log_func(f"Création de partition sur l'ID de disque : {disk_id}")
         
         partition_disk(disk)
         
-        log_info("Waiting for partition to be recognized...")
+        log_info("Attente de la reconnaissance de la partition...")
         if log_func:
-            log_func("Waiting for partition to be recognized...")
+            log_func("Attente de la reconnaissance de la partition...")
         
-        time.sleep(5)  # Wait for the system to recognize the new partition
+        time.sleep(5)  # Attendre que le système reconnaisse la nouvelle partition
         
-        log_info(f"Formatting disk ID: {disk_id} with {fs_choice}")
+        log_info(f"Formatage de l'ID de disque : {disk_id} avec {fs_choice}")
         if log_func:
-            log_func(f"Formatting disk ID: {disk_id} with {fs_choice}")
+            log_func(f"Formatage de l'ID de disque : {disk_id} avec {fs_choice}")
         
         format_disk(disk, fs_choice)
         
         log_erase_operation(disk_id, fs_choice, method_str)
         
-        log_info(f"Completed operations on disk ID: {disk_id}")
+        log_info(f"Opérations terminées sur l'ID de disque : {disk_id}")
         if log_func:
-            log_func(f"Completed operations on disk ID: {disk_id}")
+            log_func(f"Opérations terminées sur l'ID de disque : {disk_id}")
         
         
     except FileNotFoundError as e:
-        log_error(f"Required command not found: {str(e)}")
+        log_error(f"Commande requise introuvable : {str(e)}")
         if log_func:
-            log_func(f"Required command not found: {str(e)}")
+            log_func(f"Commande requise introuvable : {str(e)}")
         raise
     except CalledProcessError as e:
-        log_error(f"Command execution failed for disk {disk}: {str(e)}")
+        log_error(f"Échec de l'exécution de la commande pour le disque {disk} : {str(e)}")
         if log_func:
-            log_func(f"Command execution failed for disk {disk}: {str(e)}")
+            log_func(f"Échec de l'exécution de la commande pour le disque {disk} : {str(e)}")
         raise
     except PermissionError as e:
-        log_error(f"Permission denied for disk {disk}: {str(e)}")
+        log_error(f"Permission refusée pour le disque {disk} : {str(e)}")
         if log_func:
-            log_func(f"Permission denied for disk {disk}: {str(e)}")
+            log_func(f"Permission refusée pour le disque {disk} : {str(e)}")
         raise
     except OSError as e:
-        log_error(f"OS error for disk {disk}: {str(e)}")
+        log_error(f"Erreur OS pour le disque {disk} : {str(e)}")
         if log_func:
-            log_func(f"OS error for disk {disk}: {str(e)}")
+            log_func(f"Erreur OS pour le disque {disk} : {str(e)}")
         raise
     except KeyboardInterrupt:
-        log_error(f"Processing of disk {disk} interrupted by user")
+        log_error(f"Traitement du disque {disk} interrompu par l'utilisateur")
         if log_func:
-            log_func(f"Processing of disk {disk} interrupted by user")
+            log_func(f"Traitement du disque {disk} interrompu par l'utilisateur")
         raise
     except ImportError as e:
-        log_error(f"Required module not found for disk {disk}: {str(e)}")
+        log_error(f"Module requis introuvable pour le disque {disk} : {str(e)}")
         if log_func:
-            log_func(f"Required module not found for disk {disk}: {str(e)}")
+            log_func(f"Module requis introuvable pour le disque {disk} : {str(e)}")
         raise
     except AttributeError as e:
-        log_error(f"Function or method not available for disk {disk}: {str(e)}")
+        log_error(f"Fonction ou méthode non disponible pour le disque {disk} : {str(e)}")
         if log_func:
-            log_func(f"Function or method not available for disk {disk}: {str(e)}")
+            log_func(f"Fonction ou méthode non disponible pour le disque {disk} : {str(e)}")
         raise
     except TypeError as e:
-        log_error(f"Invalid argument type for disk {disk}: {str(e)}")
+        log_error(f"Type d'argument invalide pour le disque {disk} : {str(e)}")
         if log_func:
-            log_func(f"Invalid argument type for disk {disk}: {str(e)}")
+            log_func(f"Type d'argument invalide pour le disque {disk} : {str(e)}")
         raise
     except ValueError as e:
-        log_error(f"Invalid argument value for disk {disk}: {str(e)}")
+        log_error(f"Valeur d'argument invalide pour le disque {disk} : {str(e)}")
         if log_func:
-            log_func(f"Invalid argument value for disk {disk}: {str(e)}")
+            log_func(f"Valeur d'argument invalide pour le disque {disk} : {str(e)}")
         raise
 
 def get_active_disk():
     """
-    Detect the active device backing the root filesystem.
-    Always returns a list of base disk names (e.g., ['nvme0n1', 'sda']) or None for consistency.
-    Uses LVM logic if the root device is a logical volume (/dev/mapper/),
-    otherwise uses regular disk detection logic including live boot media detection.
-    All returned device names are resolved to their base disk names.
+    Détecter le périphérique actif qui soutient le système de fichiers racine.
+    Retourne toujours une liste de noms de disques de base (ex: ['nvme0n1', 'sda']) ou None pour la cohérence.
+    Utilise la logique LVM si le périphérique racine est un volume logique (/dev/mapper/),
+    sinon utilise la logique de détection de disque régulière incluant la détection des médias de démarrage live.
+    Tous les périphériques retournés sont résolus à leur disque de base.
     """
     try:
-        # Initialize devices set for collecting all active devices
+        # Initialiser l'ensemble des périphériques pour collecter tous les périphériques actifs
         devices = set()
         live_boot_found = False
         
-        # Step 1: Check /proc/mounts for all mounted devices
+        # Étape 1 : Vérifier /proc/mounts pour tous les périphériques montés
         with open('/proc/mounts', 'r') as f:
             mounts_content = f.read()
             
-            # Look for root filesystem mount
+            # Chercher le montage du système de fichiers racine
             root_device = None
             for line in mounts_content.split('\n'):
                 if line.strip() and ' / ' in line:
@@ -146,10 +146,10 @@ def get_active_disk():
                         root_device = parts[0]
                         break
 
-        # Step 2: Handle special live boot cases where root is not a real device
+        # Étape 2 : Gérer les cas spéciaux de démarrage live où la racine n'est pas un vrai périphérique
         if not root_device or root_device in ['rootfs', 'overlay', 'aufs', '/dev/root']:
             
-            # In live boot, look for the actual boot media in /proc/mounts
+            # En démarrage live, chercher le média de démarrage réel dans /proc/mounts
             with open('/proc/mounts', 'r') as f:
                 for line in f:
                     parts = line.split()
@@ -157,7 +157,7 @@ def get_active_disk():
                         device = parts[0]
                         mount_point = parts[1]
                         
-                        # Look for common live boot mount points
+                        # Chercher les points de montage communs du démarrage live
                         if any(keyword in mount_point for keyword in ['/run/live', '/lib/live', '/live/', '/cdrom']):
                             match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                             if match:
@@ -166,9 +166,8 @@ def get_active_disk():
                                 devices.add(base_device)
                                 live_boot_found = True
                         
-                        # Also check for USB/removable media patterns
+                        # Vérifier aussi les périphériques USB/amovibles
                         elif device.startswith('/dev/') and any(keyword in device for keyword in ['sd', 'nvme', 'mmc']):
-                            # Check if this looks like a removable device by checking mount point
                             if '/media' in mount_point or '/mnt' in mount_point or '/run' in mount_point:
                                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                                 if match:
@@ -176,20 +175,18 @@ def get_active_disk():
                                     base_device = get_base_disk(device_name)
                                     devices.add(base_device)
             
-            # If we still haven't found anything, fall back to df command analysis
+            # Si rien trouvé, fallback : utiliser df
             if not devices:
-                # Use df command instead of viewing /proc/mounts
                 try:
                     output = run_command(["df", "-h"])
                     lines = output.strip().split('\n')
                     
-                    for line in lines[1:]:  # Skip header
+                    for line in lines[1:]:  # Ignorer l'en-tête
                         parts = line.split()
                         if len(parts) >= 6:
                             device = parts[0]
                             mount_point = parts[5]
                             
-                            # Look for any mounted storage devices
                             if device.startswith('/dev/') and any(keyword in device for keyword in ['sd', 'nvme', 'mmc']):
                                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                                 if match:
@@ -197,40 +194,37 @@ def get_active_disk():
                                     base_device = get_base_disk(device_name)
                                     devices.add(base_device)
                 except (FileNotFoundError, CalledProcessError) as e:
-                    log_error(f"Error running df command: {str(e)}")
+                    log_error(f"Erreur lors de l'exécution de la commande df : {str(e)}")
         
         else:
-            # Step 3: Handle normal root device (installed system)
-            # Check if this is LVM/device mapper
+            # Étape 3 : Périphérique racine normal
             if '/dev/mapper/' in root_device or '/dev/dm-' in root_device:
-                # LVM resolution - map to physical drives
+                # Résolution LVM - trouver les disques physiques
                 active_physical_drives = get_physical_drives_for_logical_volumes([root_device])
                 
-                # Add physical drives to devices set, resolving to base names
                 for drive in active_physical_drives:
                     base_device = get_base_disk(drive)
                     devices.add(base_device)
                     
             else:
-                # Regular disk - extract device name with improved regex for NVMe
+                # Disque régulier - extraire le nom du périphérique avec regex
                 match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', root_device)
                 if match:
                     device_name = match.group(1)
                     base_device = get_base_disk(device_name)
                     devices.add(base_device)
             
-            # Also check for live boot media even in normal systems
+            # Vérifier aussi les médias de démarrage live
             try:
                 output = run_command(["df", "-h"])
                 lines = output.strip().split('\n')
                 
-                for line in lines[1:]:  # Skip header line
+                for line in lines[1:]:  # Ignorer l'en-tête
                     parts = line.split()
                     if len(parts) >= 6:
                         device = parts[0]
                         mount_point = parts[5]
                         
-                        # Check for live boot mount points
                         if "/run/live" in mount_point or "/lib/live" in mount_point:
                             match = re.search(r'/dev/([a-zA-Z]+\d*[a-zA-Z]*\d*)', device)
                             if match:
@@ -239,40 +233,47 @@ def get_active_disk():
                                 devices.add(base_device)
                                 live_boot_found = True
             except (FileNotFoundError, CalledProcessError) as e:
-                log_info(f"Could not check for live boot devices: {str(e)}")
+                log_info(f"Impossible de vérifier les périphériques de démarrage live : {str(e)}")
 
-        # Step 4: Return logic
+        # Étape 4 : Logique de retour
         if devices:
             device_list = list(devices)
+            
+            # Si démarrage live trouvé, prioriser ces périphériques
+            if live_boot_found:
+                final_devices = [dev for dev in device_list if not dev.startswith('/dev/')]
+                if final_devices:
+                    return final_devices
+            
             return device_list
         else:
-            log_error("No active devices found")
+            log_error("Aucun périphérique actif trouvé")
             return None
 
     except FileNotFoundError as e:
-        log_error(f"Required file not found: {str(e)}")
+        log_error(f"Fichier requis introuvable : {str(e)}")
         return None
     except PermissionError as e:
-        log_error(f"Permission denied accessing system files: {str(e)}")
+        log_error(f"Permission refusée pour l'accès aux fichiers système : {str(e)}")
         return None
     except OSError as e:
-        log_error(f"OS error accessing system information: {str(e)}")
+        log_error(f"Erreur OS lors de l'accès aux informations système : {str(e)}")
         return None
     except CalledProcessError as e:
-        log_error(f"Error running command: {str(e)}")
+        log_error(f"Erreur lors de l'exécution de la commande : {str(e)}")
         return None
     except (IndexError, ValueError) as e:
-        log_error(f"Error parsing command output: {str(e)}")
+        log_error(f"Erreur lors de l'analyse de la sortie de commande : {str(e)}")
         return None
     except re.error as e:
-        log_error(f"Regex pattern error: {str(e)}")
+        log_error(f"Erreur de motif regex : {str(e)}")
         return None
     except KeyboardInterrupt:
-        log_error("Operation interrupted by user")
+        log_error("Opération interrompue par l'utilisateur")
         return None
     except UnicodeDecodeError as e:
-        log_error(f"Error decoding file content: {str(e)}")
+        log_error(f"Erreur de décodage du contenu du fichier : {str(e)}")
         return None
     except MemoryError:
-        log_error("Insufficient memory to process device information")
+        log_error("Mémoire insuffisante pour traiter les informations des périphériques")
         return None
