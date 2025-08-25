@@ -22,6 +22,7 @@ class DiskEraserGUI:
         self.root.geometry("600x500")
         self.root.attributes("-fullscreen", True)
         self.disk_vars: Dict[str, tk.BooleanVar] = {}
+        self.disk_checkboxes: Dict[str, ttk.Checkbutton] = {}  # Store checkbox references
         self.filesystem_var = tk.StringVar(value="ext4")
         self.passes_var = tk.StringVar(value="5")
         self.erase_method_var = tk.StringVar(value="overwrite")
@@ -148,6 +149,7 @@ class DiskEraserGUI:
         for widget in self.scrollable_disk_frame.winfo_children():
             widget.destroy()
         self.disk_vars = {}
+        self.disk_checkboxes = {}  # Clear checkbox references
         try:
             self.disks = get_disk_list()
         except Exception as e:
@@ -181,8 +183,8 @@ class DiskEraserGUI:
                 self.active_drive_logged = True
             if active_physical_drives:
                 self.disclaimer_var.set(
-                    "AVERTISSEMENT : Le disque marqué en rouge contient le système de fichiers actif. "
-                    "Effacer ce disque causera une panne du système et une perte de données !"
+                    "AVERTISSEMENT : Les disques marqués en rouge contiennent le système de fichiers actif "
+                    "et ne peuvent pas être sélectionnés pour l'effacement afin de protéger le système."
                 )
             else:
                 self.disclaimer_var.set("")
@@ -215,6 +217,10 @@ class DiskEraserGUI:
             self.disk_vars[disk['device']] = var
             cb = ttk.Checkbutton(checkbox_row, variable=var)
             cb.pack(side=tk.LEFT)
+            
+            # Store the checkbox reference
+            self.disk_checkboxes[disk['device']] = cb
+            
             device_name = disk['device'].replace('/dev/', '')
             try:
                 disk_identifier = get_disk_serial(device_name)
@@ -230,7 +236,15 @@ class DiskEraserGUI:
                 is_active = base_device_name in active_physical_drives
             except Exception:
                 is_active = False
-            active_indicator = " (DISQUE SYSTÈME ACTIF)" if is_active else ""
+            
+            # Disable checkbox and change state for active disks
+            if is_active:
+                cb.configure(state="disabled")
+                var.set(False)  # Ensure active disks are not selected
+                active_indicator = " (DISQUE SYSTÈME ACTIF - NON SÉLECTIONNABLE)"
+            else:
+                active_indicator = ""
+            
             disk_label = disk.get('label', 'Inconnu')
             label_indicator = f" [Étiquette : {disk_label}]" if disk_label and disk_label != "No Label" else " [Aucune Étiquette]"
             text_color = "red" if is_active else "blue" if 'is_device_ssd' in locals() and is_device_ssd else "black"
@@ -257,21 +271,25 @@ class DiskEraserGUI:
         if not selected_disks:
             messagebox.showwarning("Avertissement", "Aucun disque sélectionné !")
             return
+        
+        # Double-check: This should not happen with disabled checkboxes, but add extra protection
         active_disk_selected = False
         for disk in selected_disks:
             disk_name = disk.replace('/dev/', '')
             if self.active_disk and any(active_disk in disk_name for active_disk in self.active_disk):
                 active_disk_selected = True
                 break
+        
         if active_disk_selected:
-            if not messagebox.askyesno(
-                "DANGER - DISQUE SYSTÈME SÉLECTIONNÉ", 
-                "AVERTISSEMENT : Vous avez sélectionné le DISQUE SYSTÈME ACTIF !\n\n"
-                "Effacer ce disque va PLANTER votre système et causer une PERTE DE DONNÉES PERMANENTE !\n\n"
-                "Êtes-vous absolument sûr de vouloir continuer ?",
-                icon="warning"
-            ):
-                return
+            messagebox.showerror(
+                "ERREUR - DISQUE SYSTÈME SÉLECTIONNÉ", 
+                "ERREUR : Un disque système actif a été détecté dans la sélection.\n\n"
+                "Ceci ne devrait pas être possible. Veuillez actualiser la liste des disques "
+                "et réessayer. Si le problème persiste, redémarrez l'application.",
+                icon="error"
+            )
+            return
+        
         erase_method = self.erase_method_var.get()
         ssd_selected = False
         if erase_method == "overwrite":
